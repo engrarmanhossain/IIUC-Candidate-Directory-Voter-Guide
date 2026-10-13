@@ -16,9 +16,8 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Optional Firebase SDK for Realtime Online Cloud Sync across visitors -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- Official Supabase JS v2 Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     tailwind.config = {
@@ -37,6 +36,10 @@
               navy: '#0f172a',
               gold: '#f59e0b',
               'gold-hover': '#d97706'
+            },
+            supabase: {
+              green: '#3ecf8e',
+              dark: '#1c1c1c'
             }
           },
           fontFamily: {
@@ -60,7 +63,6 @@
       }
     }
     
-    /* Custom scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -73,14 +75,11 @@
       background-color: rgba(15, 23, 42, 0.75);
       backdrop-filter: blur(4px);
     }
-    .admin-pill {
-      background: linear-gradient(135deg, #065f46 0%, #0f172a 100%);
-    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
 
-  <!-- ADMIN ACTIVE TOP BAR (Visible only when Admin is logged in) -->
+  <!-- ADMIN ACTIVE TOP BAR (Visible when Admin is logged in) -->
   <div id="adminTopBar" class="hidden bg-emerald-950 text-white px-4 py-2 border-b border-emerald-500/30 text-xs no-print">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2">
@@ -88,11 +87,10 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           ADMIN MODE ACTIVE
         </span>
-        <span class="text-slate-300">Logged in as: <strong id="adminEmailDisplay" class="text-amber-300 font-mono">armanhossain.eee.info@gmail.com</strong></span>
+        <span class="text-slate-300">Logged in as: <strong class="text-amber-300 font-mono">armanhossain.eee.info@gmail.com</strong></span>
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- Pending counters -->
         <button onclick="setAdminTab('pending')" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1.5 transition">
           <i data-lucide="clock" class="w-3.5 h-3.5"></i>
           <span>Pending Submissions (<span id="adminPendingCountBadge">0</span>)</span>
@@ -141,10 +139,10 @@
         <!-- Header Actions -->
         <div class="flex items-center space-x-2 sm:space-x-3">
           
-          <!-- Cloud Sync Status Indicator -->
-          <button onclick="openCloudConfigModal()" id="cloudStatusBtn" title="Cloud Database Connection" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-            <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span id="cloudStatusText">Sync Ready</span>
+          <!-- Supabase Cloud Connection Status Badge -->
+          <button onclick="openSupabaseConfigModal()" id="supabaseStatusBtn" title="Supabase Cloud Connection" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            <span id="supabaseStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span id="supabaseStatusText" class="hidden sm:inline">Supabase</span>
           </button>
 
           <!-- Print Guide Button -->
@@ -170,15 +168,13 @@
             </div>
           </div>
 
-          <!-- ADMIN PORTAL LOGIN / DASHBOARD BUTTON -->
-          <div id="adminPortalHeaderBtnWrapper">
-            <button onclick="openAdminLoginModal()" id="adminLoginBtn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 transition shadow-sm">
-              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-              <span>Admin Login</span>
-            </button>
-          </div>
+          <!-- ADMIN PORTAL LOGIN BUTTON -->
+          <button onclick="openAdminLoginModal()" id="adminLoginBtn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 transition shadow-sm">
+            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+            <span>Admin</span>
+          </button>
 
-          <!-- PUBLIC "+ SUBMIT CANDIDATE" / ADMIN "+ ADD CANDIDATE" -->
+          <!-- SUBMIT CANDIDATE BUTTON -->
           <button onclick="openCandidateFormModal()" class="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-900/30 transition transform active:scale-95">
             <i data-lucide="user-plus" class="w-4 h-4"></i>
             <span id="headerSubmitBtnLabel">+ Submit Candidate</span>
@@ -200,6 +196,26 @@
   <!-- MAIN CONTAINER -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
+    <!-- SUPABASE NOT CONNECTED ALERT (For First-time production setup) -->
+    <div id="supabaseSetupBanner" class="hidden bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-900 text-white border border-emerald-500/30 rounded-2xl p-5 no-print shadow-xl">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
+            <i data-lucide="database" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-white">Connect Supabase Cloud Database</h3>
+            <p class="text-xs text-slate-300 mt-0.5">
+              Connect your free Supabase project to enable real-time candidate synchronization across visitors and direct photo cloud storage.
+            </p>
+          </div>
+        </div>
+        <button onclick="openSupabaseConfigModal()" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs whitespace-nowrap shadow-md transition">
+          Connect Supabase in 1 Click
+        </button>
+      </div>
+    </div>
+
     <!-- PUBLIC SUBMISSION NOTICE / WORKFLOW BANNER -->
     <div id="publicNoticeBanner" class="bg-gradient-to-r from-amber-50 to-emerald-50 border border-amber-200/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-700 no-print shadow-sm">
       <div class="flex items-center gap-3">
@@ -209,7 +225,7 @@
         <div>
           <span class="font-bold text-slate-900">Open IIUC Candidate Submissions with Admin Approval:</span>
           <p class="text-slate-600 mt-0.5">
-            Anyone can submit a candidate or request a deletion. All entries and deletions undergo verification by the administrator (<span class="font-mono text-emerald-800 font-semibold">armanhossain.eee.info@gmail.com</span>) before becoming live.
+            Anyone can submit a candidate profile or request a removal. All submissions undergo verification by administrator (<strong class="font-mono text-emerald-800 font-semibold">armanhossain.eee.info@gmail.com</strong>) before becoming live.
           </p>
         </div>
       </div>
@@ -239,9 +255,9 @@
         </div>
 
         <div class="flex items-center gap-2 text-xs">
-          <button onclick="openCloudConfigModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold flex items-center gap-1.5 transition">
-            <i data-lucide="cloud" class="w-3.5 h-3.5 text-blue-600"></i>
-            <span>Cloud Database Sync</span>
+          <button onclick="openSupabaseConfigModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Supabase Settings</span>
           </button>
         </div>
       </div>
@@ -249,7 +265,6 @@
 
     <!-- KPI STATS OVERVIEW -->
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
-      <!-- Total Approved Candidates -->
       <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Live Candidates</p>
@@ -263,7 +278,6 @@
         </div>
       </div>
 
-      <!-- Positions Contested -->
       <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions</p>
@@ -277,7 +291,6 @@
         </div>
       </div>
 
-      <!-- Departments -->
       <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departments</p>
@@ -291,7 +304,6 @@
         </div>
       </div>
 
-      <!-- Divisions / Centers -->
       <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Divisions / Centers</p>
@@ -310,7 +322,6 @@
     <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-4 no-print">
       <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         
-        <!-- Live Search -->
         <div class="relative flex-1">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
             <i data-lucide="search" class="w-4 h-4"></i>
@@ -322,17 +333,12 @@
             placeholder="Search candidate by name, ballot #, IEB membership ID, batch, department..." 
             class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition placeholder:text-slate-400"
           >
-          <button 
-            id="clearSearchBtn" 
-            onclick="clearSearch()" 
-            class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+          <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <!-- View Toggle & Quick Filter reset -->
         <div class="flex items-center gap-2 self-end md:self-auto">
-          <!-- View Toggle -->
           <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-medium">
             <button id="viewGridBtn" onclick="setViewMode('grid')" class="px-2.5 py-1.5 rounded-md flex items-center gap-1.5 bg-white text-emerald-700 shadow-sm transition">
               <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
@@ -344,16 +350,9 @@
             </button>
           </div>
 
-          <!-- Reset Filter -->
           <button onclick="resetFilters()" title="Reset All Filters" class="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold transition flex items-center gap-1">
             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Reset</span>
-          </button>
-
-          <!-- Sample Data Loader -->
-          <button onclick="loadSampleDataConfirm()" title="Restore Sample Data" class="px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition flex items-center gap-1">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">Demo Data</span>
           </button>
         </div>
 
@@ -457,10 +456,10 @@
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-        <span class="font-semibold text-slate-700">IEB IIUC Candidate Directory & Voter Guide</span>
+        <span class="font-semibold text-slate-700">IEB IIUC Candidate Directory & Voter Guide</span> • Production on Vercel & Supabase
       </div>
       <div>
-        <span>Admin Contact: <a href="mailto:armanhossain.eee.info@gmail.com" class="text-emerald-700 font-semibold hover:underline">armanhossain.eee.info@gmail.com</a></span>
+        <span>Admin: <a href="mailto:armanhossain.eee.info@gmail.com" class="text-emerald-700 font-semibold hover:underline">armanhossain.eee.info@gmail.com</a></span>
       </div>
     </div>
   </footer>
@@ -509,13 +508,13 @@
               type="password" 
               id="adminLoginPasscode" 
               required 
-              placeholder="Enter admin passcode" 
+              placeholder="Enter passcode" 
               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
           </div>
           <div class="flex items-center justify-between mt-1 text-[11px] text-slate-500">
             <span>Default PIN: <strong class="text-emerald-700">arman2026</strong></span>
-            <button type="button" onclick="showPasscodeHint()" class="text-emerald-600 hover:underline">Need help?</button>
+            <button type="button" onclick="sendSupabaseMagicLink()" class="text-emerald-600 hover:underline">Send Magic Link to Email</button>
           </div>
         </div>
 
@@ -535,7 +534,6 @@
   <div id="candidateFormModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-3 sm:p-4">
     <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all my-8">
       
-      <!-- Modal Header -->
       <div class="bg-gradient-to-r from-emerald-900 to-slate-900 px-6 py-4 text-white flex items-center justify-between border-b border-emerald-500/20">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300">
@@ -551,25 +549,21 @@
         </button>
       </div>
 
-      <!-- Notice Banner Inside Form -->
       <div id="formWorkflowAlert" class="bg-amber-50 px-6 py-2.5 border-b border-amber-200 text-xs text-amber-900 flex items-center gap-2">
         <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
-        <span>Public submission notice: Once submitted, your candidate entry will be reviewed by the administrator before appearing in the public list.</span>
+        <span>Public submission notice: Once submitted, your candidate entry will be reviewed by administrator before appearing on the public directory.</span>
       </div>
 
-      <!-- Modal Body (Form) -->
       <form id="candidateForm" onsubmit="handleSaveCandidate(event)" class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
         <input type="hidden" id="candidateId">
 
         <!-- SECTION 1: PHOTO & BASIC IDENTITY -->
         <div>
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-1.5">
-            <i data-lucide="id-card" class="w-4 h-4 text-emerald-600"></i>
-            Primary Electoral & Academic Identity
+            <i data-lucide="id-card" class="w-4 h-4 text-emerald-600"></i> Primary Identity
           </h4>
 
           <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-            <!-- Photo Upload & Preview -->
             <div class="md:col-span-4 flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
               <div class="relative w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden bg-slate-200 mb-3 group">
                 <img id="formImagePreview" src="profile.png" alt="Candidate preview" class="w-full h-full object-cover">
@@ -577,8 +571,8 @@
 
               <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                 <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                <span>Upload Photo</span>
-                <input type="file" id="formPhotoInput" accept="image/*" onchange="handleImageUpload(event)" class="hidden">
+                <span id="photoUploadLabel">Upload Photo</span>
+                <input type="file" id="formPhotoInput" accept="image/*" onchange="handleImageFileSelect(event)" class="hidden">
               </label>
 
               <span class="text-[10px] text-slate-400 mt-2">Or enter image URL below:</span>
@@ -593,53 +587,28 @@
               </div>
             </div>
 
-            <!-- Basic Info Fields -->
             <div class="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <!-- Full Name -->
               <div class="sm:col-span-2">
                 <label class="block text-xs font-bold text-slate-700 mb-1">Candidate Full Name <span class="text-rose-500">*</span></label>
                 <div class="relative">
-                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-semibold text-xs">
-                    Engr.
-                  </div>
-                  <input 
-                    type="text" 
-                    id="formName" 
-                    required 
-                    placeholder="Candidate Name" 
-                    class="w-full pl-14 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-semibold text-xs">Engr.</div>
+                  <input type="text" id="formName" required placeholder="Candidate Name" class="w-full pl-14 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
               </div>
 
-              <!-- Ballot No -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Ballot No <span class="text-rose-500">*</span></label>
                 <div class="relative">
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-amber-500">
                     <i data-lucide="hash" class="w-4 h-4"></i>
                   </div>
-                  <input 
-                    type="text" 
-                    id="formBallotNo" 
-                    required 
-                    placeholder="e.g. 05 or 12" 
-                    class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  >
+                  <input type="text" id="formBallotNo" required placeholder="e.g. 05 or 12" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
               </div>
 
-              <!-- Candidate For (Position) -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Candidate For (Post) <span class="text-rose-500">*</span></label>
-                <input 
-                  type="text" 
-                  id="formCandidateFor" 
-                  list="positionSuggestions" 
-                  required 
-                  placeholder="e.g. Vice-Chairman, Center Secretary..." 
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                >
+                <input type="text" id="formCandidateFor" list="positionSuggestions" required placeholder="e.g. Vice-Chairman, Center Secretary..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
                 <datalist id="positionSuggestions">
                   <option value="Central Council Member (General)">
                   <option value="Central Council Member (Division)">
@@ -657,26 +626,14 @@
                 </datalist>
               </div>
 
-              <!-- IIUC Batch -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">IIUC Batch <span class="text-rose-500">*</span></label>
-                <input 
-                  type="text" 
-                  id="formBatch" 
-                  required 
-                  placeholder="e.g. 18th Batch / Autumn 2008" 
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                >
+                <input type="text" id="formBatch" required placeholder="e.g. 18th Batch / Autumn 2008" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
               </div>
 
-              <!-- Department -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Department <span class="text-rose-500">*</span></label>
-                <select 
-                  id="formDepartment" 
-                  required 
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                >
+                <select id="formDepartment" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
                   <option value="">Select Department</option>
                   <option value="EEE">Electrical & Electronic Engineering (EEE)</option>
                   <option value="CSE">Computer Science & Engineering (CSE)</option>
@@ -688,34 +645,19 @@
                 </select>
               </div>
 
-              <!-- IEB Membership ID -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">IEB Membership ID <span class="text-rose-500">*</span></label>
                 <div class="relative">
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-600">
                     <i data-lucide="badge-check" class="w-4 h-4"></i>
                   </div>
-                  <input 
-                    type="text" 
-                    id="formMembershipId" 
-                    required 
-                    placeholder="e.g. M-28491 or F-12340" 
-                    class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  >
+                  <input type="text" id="formMembershipId" required placeholder="e.g. M-28491 or F-12340" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
                 </div>
               </div>
 
-              <!-- Division / Center -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Division / Center <span class="text-rose-500">*</span></label>
-                <input 
-                  type="text" 
-                  id="formDivision" 
-                  list="divisionSuggestions" 
-                  required 
-                  placeholder="e.g. Chattogram Center, Central Council..." 
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                >
+                <input type="text" id="formDivision" list="divisionSuggestions" required placeholder="e.g. Chattogram Center, Central Council..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
                 <datalist id="divisionSuggestions">
                   <option value="Chattogram Center">
                   <option value="Dhaka Center">
@@ -733,55 +675,28 @@
         <!-- SECTION 2: QUALIFICATIONS -->
         <div>
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-1.5">
-            <i data-lucide="award" class="w-4 h-4 text-emerald-600"></i>
-            Detailed Qualifications
+            <i data-lucide="award" class="w-4 h-4 text-emerald-600"></i> Qualifications
           </h4>
 
           <div class="space-y-4">
-            <!-- Educational Qualification -->
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Educational Qualifications <span class="text-rose-500">*</span></label>
-              <textarea 
-                id="formEducation" 
-                rows="3" 
-                required 
-                placeholder="• B.Sc. in Engineering, IIUC&#10;• M.Sc. or postgraduate degrees&#10;• Higher Secondary Certificate" 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              ></textarea>
+              <textarea id="formEducation" rows="3" required placeholder="• B.Sc. in Engineering, IIUC&#10;• M.Sc. or postgraduate degrees" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"></textarea>
             </div>
 
-            <!-- Professional Qualification -->
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Professional Qualifications & Experience <span class="text-rose-500">*</span></label>
-              <textarea 
-                id="formProfessional" 
-                rows="3" 
-                required 
-                placeholder="• Current Designation & Organization&#10;• Key engineering projects & career experience&#10;• Certifications (PE, PMP, etc.)" 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              ></textarea>
+              <textarea id="formProfessional" rows="3" required placeholder="• Current Designation & Organization&#10;• Key engineering projects & career experience" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"></textarea>
             </div>
 
-            <!-- Extra Curricular Qualification -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Extra-Curricular Qualifications, Social & Leadership</label>
-              <textarea 
-                id="formExtraCurricular" 
-                rows="3" 
-                placeholder="• IIUC Club leadership (President, Secretary)&#10;• IEEE / IEB volunteer activities&#10;• Social welfare, Blood donation campaigns" 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              ></textarea>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Extra-Curricular, Social & Leadership</label>
+              <textarea id="formExtraCurricular" rows="3" placeholder="• IIUC Club leadership (President, Secretary)&#10;• IEEE / IEB volunteer activities" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"></textarea>
             </div>
 
-            <!-- Campaign Manifesto / Vision -->
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Campaign Manifesto / Vision for IEB</label>
-              <textarea 
-                id="formManifesto" 
-                rows="2" 
-                placeholder="Key vision and commitments to voters..." 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              ></textarea>
+              <textarea id="formManifesto" rows="2" placeholder="Key vision and commitments to voters..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"></textarea>
             </div>
           </div>
         </div>
@@ -789,8 +704,7 @@
         <!-- SECTION 3: SUBMITTER & CONTACT INFO -->
         <div>
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-1.5">
-            <i data-lucide="phone-call" class="w-4 h-4 text-emerald-600"></i>
-            Candidate Contact & Submitter Verification
+            <i data-lucide="phone-call" class="w-4 h-4 text-emerald-600"></i> Contact & Submitter Verification
           </h4>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -806,26 +720,24 @@
 
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">LinkedIn / Social Profile</label>
-              <input type="text" id="formSocial" placeholder="linkedin.com/in/..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
+              <input type="text" id="formSocial" placeholder="https://linkedin.com/in/..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
             </div>
           </div>
 
-          <!-- Submitter Identity (for non-admin submissions) -->
           <div id="submitterInfoRow" class="mt-4 p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Name / Relation to Candidate</label>
               <input type="text" id="formSubmitterName" placeholder="e.g. Self / Batchmate / Campaign Team" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Email (for notification upon approval)</label>
+              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Email (for verification notification)</label>
               <input type="email" id="formSubmitterEmail" placeholder="your.email@example.com" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
             </div>
           </div>
         </div>
 
-        <!-- FORM ACTION BUTTONS -->
         <div class="pt-4 border-t border-slate-200 flex items-center justify-between">
-          <span class="text-[11px] text-slate-500" id="formNoticeFooter">All submissions are reviewed by armanhossain.eee.info@gmail.com</span>
+          <span class="text-[11px] text-slate-500" id="formNoticeFooter">Admin Review: armanhossain.eee.info@gmail.com</span>
           <div class="flex items-center gap-2">
             <button type="button" onclick="closeCandidateFormModal()" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100">Cancel</button>
             <button type="submit" id="formSubmitBtn" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md flex items-center gap-1.5">
@@ -863,7 +775,7 @@
         <input type="hidden" id="deletionCandidateId">
         
         <p class="text-xs text-slate-600">
-          You are requesting the removal of candidate: <strong id="deletionCandidateName" class="text-slate-900 font-bold">Engr. Name</strong> (Ballot #<span id="deletionCandidateBallot">--</span>).
+          You are requesting removal of candidate: <strong id="deletionCandidateName" class="text-slate-900 font-bold">Engr. Name</strong> (Ballot #<span id="deletionCandidateBallot">--</span>).
         </p>
 
         <div>
@@ -918,12 +830,8 @@
 
           <div class="text-center sm:text-left flex-1">
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
-              <span id="detailCandidateForBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-900 shadow-sm">
-                Candidate Post
-              </span>
-              <span id="detailDivisionBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Division / Center
-              </span>
+              <span id="detailCandidateForBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-900 shadow-sm">Candidate Post</span>
+              <span id="detailDivisionBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Division / Center</span>
               <span id="detailStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[11px] font-bold"></span>
             </div>
 
@@ -947,12 +855,7 @@
         </div>
       </div>
 
-      <!-- Detail Body -->
       <div class="p-6 space-y-6 max-h-[60vh] overflow-y-auto bg-slate-50/50">
-        
-        <!-- Pending / Deletion note alert (if applicable) -->
-        <div id="detailAdminNoteBox" class="hidden p-3.5 rounded-xl border text-xs"></div>
-
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-2 mb-2">
             <i data-lucide="book-open" class="w-4 h-4"></i> Educational Qualifications
@@ -990,56 +893,61 @@
             </a>
           </div>
         </div>
-
       </div>
 
-      <!-- Detail Modal Footer Actions -->
       <div class="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-between">
         <div class="text-xs text-slate-400">
           <span id="detailSubmitterNote">Verified IIUC Entry</span>
         </div>
-        <div class="flex items-center gap-2" id="detailActionBtnsContainer">
-          <!-- Buttons dynamically injected based on Admin vs Public status -->
-        </div>
+        <div class="flex items-center gap-2" id="detailActionBtnsContainer"></div>
       </div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL 5: CLOUD DATABASE & FIREBASE CONFIG MODAL                           -->
+  <!-- MODAL 5: SUPABASE CLOUD CONFIG MODAL                                      -->
   <!-- ========================================================================= -->
-  <div id="cloudConfigModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
+  <div id="supabaseConfigModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-      <div class="bg-gradient-to-r from-blue-900 to-slate-900 p-5 text-white flex items-center justify-between">
+      <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 p-5 text-white flex items-center justify-between">
         <div class="flex items-center gap-2.5">
-          <i data-lucide="cloud" class="w-5 h-5 text-blue-400"></i>
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <i data-lucide="database" class="w-5 h-5"></i>
+          </div>
           <div>
-            <h3 class="font-bold text-base">Realtime Cloud Sync Setup</h3>
-            <p class="text-xs text-blue-200">Connect to free Firebase to sync across all visitors</p>
+            <h3 class="font-bold text-base">Supabase Cloud Database Settings</h3>
+            <p class="text-xs text-emerald-200">Production Database for Vercel & Web</p>
           </div>
         </div>
-        <button onclick="closeCloudConfigModal()" class="text-white/70 hover:text-white">
+        <button onclick="closeSupabaseConfigModal()" class="text-white/70 hover:text-white">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
       <div class="p-6 space-y-4 text-xs text-slate-600">
         <p>
-          To allow <strong>any visitor across the internet</strong> to submit candidates that appear in your Admin Dashboard in real time, paste your free Firebase project config below:
+          Connect your free <strong>Supabase</strong> project to store all candidates, pending approval submissions, and photos in the cloud:
         </p>
 
         <div>
-          <label class="block font-bold text-slate-700 mb-1">Firebase Config (JSON or JS Object):</label>
-          <textarea id="firebaseConfigInput" rows="6" placeholder='{&#10;  "apiKey": "AIzaSy...",&#10;  "authDomain": "your-app.firebaseapp.com",&#10;  "projectId": "your-app-id",&#10;  "storageBucket": "your-app.appspot.com"&#10;}' class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"></textarea>
+          <label class="block font-bold text-slate-700 mb-1">Project URL (SUPABASE_URL):</label>
+          <input type="text" id="supabaseUrlInput" placeholder="https://xyzcompany.supabase.co" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono">
         </div>
 
-        <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-900">
-          <strong>Tip:</strong> Without Firebase, submissions and approvals are stored in browser localStorage. You can export/import JSON data anytime using the Export button.
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Public Anon API Key (SUPABASE_ANON_KEY):</label>
+          <textarea id="supabaseAnonKeyInput" rows="3" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono"></textarea>
+        </div>
+
+        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 space-y-1">
+          <p><strong>Where to find these in Supabase?</strong></p>
+          <p>Go to your Supabase project → <strong>Settings</strong> → <strong>API</strong> → Copy <strong>Project URL</strong> and <strong>anon public key</strong>.</p>
+          <p class="text-[11px] text-emerald-700">Remember to run the <code>supabase-schema.sql</code> script in Supabase SQL Editor!</p>
         </div>
 
         <div class="flex items-center justify-between pt-2">
-          <button onclick="clearCloudConfig()" class="text-rose-600 hover:underline font-semibold">Disconnect / Clear</button>
-          <button onclick="saveCloudConfig()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm">Save & Connect</button>
+          <button onclick="clearSupabaseConfig()" class="text-rose-600 hover:underline font-semibold">Disconnect / Clear</button>
+          <button onclick="saveSupabaseConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm">Save & Connect</button>
         </div>
       </div>
     </div>
@@ -1049,138 +957,27 @@
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
   <!-- ========================================================================= -->
-  <!-- JAVASCRIPT: APPLICATION LOGIC, ROLES & APPROVAL SYSTEM                    -->
+  <!-- JAVASCRIPT: SUPABASE V2 INTEGRATION & APPLICATION CONTROLLER             -->
   <!-- ========================================================================= -->
   <script>
-    // Configuration & Keys
     const ADMIN_EMAIL = "armanhossain.eee.info@gmail.com";
     const ADMIN_DEFAULT_PIN = "arman2026";
-    const STORAGE_KEY_CANDIDATES = "ieb_iiuc_candidates_v2";
+    const STORAGE_KEY_SUPABASE = "ieb_supabase_config";
     const STORAGE_KEY_ADMIN_AUTH = "ieb_iiuc_admin_session";
-    const STORAGE_KEY_FIREBASE = "ieb_iiuc_firebase_config";
+    const STORAGE_KEY_LOCAL_BACKUP = "ieb_candidates_backup";
 
-    // Initial Sample Candidates
-    const SAMPLE_CANDIDATES = [
-      {
-        id: 'cand_1',
-        name: 'Engr. Arman Hossain',
-        ballotNo: '07',
-        candidateFor: 'Center Vice-Chairman (Academic & HRD)',
-        division: 'Chattogram Center',
-        department: 'EEE',
-        batch: '18th Batch (Autumn 2008)',
-        membershipId: 'M-28491',
-        imageUrl: 'profile.png',
-        education: '• B.Sc. in Electrical and Electronic Engineering (EEE), IIUC\n• M.Sc. in Renewable Energy & Power Systems\n• HSC (Science), Chittagong College',
-        professional: '• Lead Electrical & Automation Systems Engineer\n• 10+ years professional engineering & research experience\n• Certified in High Voltage Power Grid and Industrial IoT',
-        extraCurricular: '• Former President, IIUC EEE Club & RoboTech Society\n• Senior Member, IEEE Bangladesh Section & IEB Chittagong Center\n• Lead Organizer of All-Bangladesh Engineering Career Expo',
-        manifesto: 'Dedicated to empowering fresh IIUC engineering graduates, introducing state-of-the-art IEB technical workshops, and defending engineer rights.',
-        phone: '+880 1819-234567',
-        email: 'engr.arman.hossain@example.com',
-        social: 'https://linkedin.com/in/armanhossain',
-        status: 'approved', // 'approved', 'pending', 'rejected'
-        deletionRequest: null, // null or { reason, details, contact, timestamp }
-        createdAt: 1715000000000
-      },
-      {
-        id: 'cand_2',
-        name: 'Engr. Tanvir Ahmed Chowdhury',
-        ballotNo: '03',
-        candidateFor: 'Honorary Center Secretary',
-        division: 'Chattogram Center',
-        department: 'CSE',
-        batch: '14th Batch (Spring 2006)',
-        membershipId: 'F-14280',
-        imageUrl: 'ezgif-frame-001.jpg',
-        education: '• B.Sc. in Computer Science & Engineering (CSE), IIUC\n• Executive MBA in Project Management, IBA\n• CISSP Certified',
-        professional: '• Chief Technology Officer (CTO) at Premier Software Solutions\n• 15+ years experience in large-scale government digitization projects',
-        extraCurricular: '• Founding General Secretary, IIUC Computer Club\n• Member, Bangladesh Computer Society (BCS) & IEB Computer Division',
-        manifesto: 'Transforming IEB Chittagong Center into a fully automated smart center, providing subsidized cloud certifications for young engineers.',
-        phone: '+880 1711-987654',
-        email: 'engr.tanvir.cse@example.com',
-        social: 'https://linkedin.com/in/tanvir-ahmed',
-        status: 'approved',
-        deletionRequest: null,
-        createdAt: 1715001000000
-      },
-      {
-        id: 'cand_3',
-        name: 'Engr. Kazi Mahfuzur Rahman',
-        ballotNo: '12',
-        candidateFor: 'Central Council Member (General)',
-        division: 'Central Council',
-        department: 'CE',
-        batch: '10th Batch (Spring 2004)',
-        membershipId: 'F-09852',
-        imageUrl: 'person-cutout.png',
-        education: '• B.Sc. in Civil Engineering, IIUC\n• M.Sc. in Structural Engineering, BUET\n• Professional Engineer (P.Eng.)',
-        professional: '• Superintending Engineer, Roads & Highways Department (RHD)\n• Supervised multiple flyover and bridge megaprojects in Chittagong division',
-        extraCurricular: '• Former General Secretary, IIUC Alumni Association (Central)\n• Patron of Engineers Disaster Relief Team during 2024 floods',
-        manifesto: 'Strengthening the national engineering cadre, eliminating non-engineer appointments to technical leadership posts.',
-        phone: '+880 1817-554433',
-        email: 'engr.mahfuz.ce@example.com',
-        social: 'https://linkedin.com/in/mahfuz-rahman-pe',
-        status: 'approved',
-        deletionRequest: null,
-        createdAt: 1715002000000
-      },
-      {
-        id: 'cand_4',
-        name: 'Engr. Nargis Sultana',
-        ballotNo: '08',
-        candidateFor: 'Division Vice-Chairman (Electrical)',
-        division: 'Electrical Engineering Division',
-        department: 'EEE',
-        batch: '21st Batch (Autumn 2010)',
-        membershipId: 'M-31204',
-        imageUrl: 'ezgif-frame-050.jpg',
-        education: '• B.Sc. in EEE, IIUC (Summa Cum Laude)\n• M.S. in Smart Grid Technologies, Kingston University UK',
-        professional: '• Deputy Director (Planning), Power Development Board (BPDB)\n• 9+ years in high-voltage power transmission network expansion',
-        extraCurricular: '• Chairperson, Women in Engineering (WIE) Chittagong Chapter\n• IIUC Debating Club National Champion',
-        manifesto: 'Promoting gender equity in engineering leadership, continuous career training, and industrial internships for young engineering graduates.',
-        phone: '+880 1912-334455',
-        email: 'engr.nargis.eee@example.com',
-        social: 'https://linkedin.com/in/nargis-sultana-eee',
-        status: 'approved',
-        deletionRequest: null,
-        createdAt: 1715003000000
-      },
-      {
-        id: 'cand_5',
-        name: 'Engr. Shakawat Hossain Rony',
-        ballotNo: '19',
-        candidateFor: 'Executive Committee Member',
-        division: 'Chattogram Center',
-        department: 'CCE',
-        batch: '24th Batch (Spring 2012)',
-        membershipId: 'M-34190',
-        imageUrl: 'ezgif-frame-100.jpg',
-        education: '• B.Sc. in Computer & Communication Engineering (CCE), IIUC\n• Cisco Certified Network Professional (CCNP)',
-        professional: '• Principal Network Architect at leading National Telecommunications Gateway',
-        extraCurricular: '• Organizer of Blood Donation Camps across Chittagong\n• Sports Secretary, IIUC CCE Festival',
-        manifesto: 'Dedicated to fostering closer cooperation between private universities and IEB Chittagong Center.',
-        phone: '+880 1678-112233',
-        email: 'engr.rony.cce@example.com',
-        social: 'https://linkedin.com/in/rony-cce',
-        status: 'pending', // Sample pending entry to showcase approval system
-        deletionRequest: null,
-        submitter: { name: 'Batch 24 Campaign Committee', email: 'cce24@iiuc.ac.bd' },
-        createdAt: 1715004000000
-      }
-    ];
-
-    // State Variables
+    let supabaseClient = null;
     let candidates = [];
     let isAdminLoggedIn = false;
     let currentAdminTab = 'live'; // 'live', 'pending', 'deletions'
     let currentViewMode = 'grid'; // 'grid', 'table'
-    let db = null; // Firestore reference if configured
+    let selectedImageFile = null;
 
-    // Initialize Application
-    window.addEventListener('DOMContentLoaded', () => {
+    // Initialization
+    window.addEventListener('DOMContentLoaded', async () => {
       checkAdminSession();
-      loadCandidates();
-      initFirebaseIfConfigured();
+      await initializeSupabase();
+      await loadCandidates();
       populateFilterDropdowns();
       renderUI();
       lucide.createIcons();
@@ -1189,11 +986,7 @@
     // Check existing Admin Session
     function checkAdminSession() {
       const session = localStorage.getItem(STORAGE_KEY_ADMIN_AUTH);
-      if (session === ADMIN_EMAIL) {
-        isAdminLoggedIn = true;
-      } else {
-        isAdminLoggedIn = false;
-      }
+      isAdminLoggedIn = (session === ADMIN_EMAIL);
       updateAdminBarUI();
     }
 
@@ -1213,129 +1006,155 @@
         tabsWrapper.classList.remove('hidden');
         publicBanner.classList.add('hidden');
         submitBtnLabel.textContent = "+ Add Candidate (Admin)";
-        
         if (formSubtitle) formSubtitle.textContent = "Authorized Direct Admin Publishing";
         if (formAlert) formAlert.classList.add('hidden');
         if (submitterRow) submitterRow.classList.add('hidden');
         if (submitBtnText) submitBtnText.textContent = "Publish Candidate Directly";
-
-        adminLoginBtn.innerHTML = `
-          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Admin Active</span>
-        `;
+        adminLoginBtn.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i><span>Admin Active</span>`;
         adminLoginBtn.onclick = () => setAdminTab('pending');
       } else {
         topBar.classList.add('hidden');
         tabsWrapper.classList.add('hidden');
         publicBanner.classList.remove('hidden');
         submitBtnLabel.textContent = "+ Submit Candidate";
-        
         if (formSubtitle) formSubtitle.textContent = "Requires review & approval by armanhossain.eee.info@gmail.com";
         if (formAlert) formAlert.classList.remove('hidden');
         if (submitterRow) submitterRow.classList.remove('hidden');
         if (submitBtnText) submitBtnText.textContent = "Submit for Admin Approval";
-
-        adminLoginBtn.innerHTML = `
-          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-          <span>Admin Login</span>
-        `;
+        adminLoginBtn.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i><span>Admin</span>`;
         adminLoginBtn.onclick = openAdminLoginModal;
         currentAdminTab = 'live';
       }
       lucide.createIcons();
     }
 
-    // Load Candidates from localStorage or Sample
-    function loadCandidates() {
-      const stored = localStorage.getItem(STORAGE_KEY_CANDIDATES);
-      if (stored) {
-        try {
-          candidates = JSON.parse(stored);
-        } catch (e) {
-          candidates = [...SAMPLE_CANDIDATES];
+    // =========================================================================
+    // SUPABASE CLIENT SETUP & REALTIME SYNC
+    // =========================================================================
+    async function initializeSupabase() {
+      let config = null;
+
+      // 1. Check Vercel serverless /api/config
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const apiConfig = await res.json();
+          if (apiConfig.supabaseUrl && apiConfig.supabaseAnonKey) {
+            config = apiConfig;
+          }
         }
+      } catch (e) {
+        // Not on Vercel or running locally
+      }
+
+      // 2. Check localStorage fallback
+      if (!config) {
+        const stored = localStorage.getItem(STORAGE_KEY_SUPABASE);
+        if (stored) {
+          try { config = JSON.parse(stored); } catch (e) {}
+        }
+      }
+
+      const statusDot = document.getElementById('supabaseStatusDot');
+      const statusText = document.getElementById('supabaseStatusText');
+      const setupBanner = document.getElementById('supabaseSetupBanner');
+
+      if (config && config.supabaseUrl && config.supabaseAnonKey && window.supabase) {
+        try {
+          supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+          statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+          statusText.textContent = 'Supabase Cloud Live';
+          setupBanner.classList.add('hidden');
+
+          // Subscribe to Realtime Postgres Changes
+          supabaseClient
+            .channel('candidates-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'candidates' }, payload => {
+              loadCandidates();
+            })
+            .subscribe();
+
+          return;
+        } catch (err) {
+          console.error("Failed to initialize Supabase:", err);
+        }
+      }
+
+      // If not connected
+      statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+      statusText.textContent = 'Supabase Setup';
+      if (!isAdminLoggedIn) {
+        setupBanner.classList.add('hidden');
       } else {
-        candidates = [...SAMPLE_CANDIDATES];
-        saveCandidatesToStorage();
+        setupBanner.classList.remove('hidden');
       }
     }
 
-    function saveCandidatesToStorage() {
-      localStorage.setItem(STORAGE_KEY_CANDIDATES, JSON.stringify(candidates));
+    // Load Candidates (From Supabase or Local Backup)
+    async function loadCandidates() {
+      if (supabaseClient) {
+        try {
+          let query = supabaseClient.from('candidates').select('*');
+          
+          // Non-admin can only select approved
+          if (!isAdminLoggedIn) {
+            query = query.eq('status', 'approved');
+          }
+
+          const { data, error } = await query.order('ballot_no', { ascending: true });
+
+          if (!error && data) {
+            candidates = data.map(normalizeCandidateRecord);
+            localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+            updateCountsAndBadges();
+            populateFilterDropdowns();
+            renderUI();
+            return;
+          }
+        } catch (err) {
+          console.warn("Supabase fetch failed, falling back to local storage:", err);
+        }
+      }
+
+      // LocalStorage fallback
+      const stored = localStorage.getItem(STORAGE_KEY_LOCAL_BACKUP);
+      if (stored) {
+        try { candidates = JSON.parse(stored); } catch (e) {}
+      }
       updateCountsAndBadges();
       populateFilterDropdowns();
-
-      // If Firestore is connected, sync
-      if (db) {
-        syncToCloud();
-      }
-    }
-
-    // Admin Authentication Handlers
-    function openAdminLoginModal() {
-      document.getElementById('adminLoginModal').classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function closeAdminLoginModal() {
-      document.getElementById('adminLoginModal').classList.add('hidden');
-    }
-
-    function handleAdminLogin(event) {
-      event.preventDefault();
-      const email = document.getElementById('adminLoginEmail').value.trim();
-      const pin = document.getElementById('adminLoginPasscode').value.trim();
-
-      if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && (pin === ADMIN_DEFAULT_PIN || pin === "armanhossain")) {
-        isAdminLoggedIn = true;
-        localStorage.setItem(STORAGE_KEY_ADMIN_AUTH, ADMIN_EMAIL);
-        closeAdminLoginModal();
-        updateAdminBarUI();
-        renderUI();
-        showToast("Welcome Engr. Arman Hossain! Administrator access granted.", "success");
-      } else {
-        showToast("Invalid Admin credentials or Passcode! Default PIN is arman2026", "error");
-      }
-    }
-
-    function logoutAdmin() {
-      isAdminLoggedIn = false;
-      localStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
-      currentAdminTab = 'live';
-      updateAdminBarUI();
       renderUI();
-      showToast("Admin logged out. Public view restored.", "info");
     }
 
-    function showPasscodeHint() {
-      alert("Administrator: " + ADMIN_EMAIL + "\nDefault PIN: arman2026\nYou can also enter this PIN to immediately access approval controls.");
-    }
-
-    // Admin Tab Switching
-    function setAdminTab(tab) {
-      currentAdminTab = tab;
-      const tabLiveBtn = document.getElementById('tabLiveBtn');
-      const tabPendingBtn = document.getElementById('tabPendingBtn');
-      const tabDeletionsBtn = document.getElementById('tabDeletionsBtn');
-      const currentTabLabel = document.getElementById('currentTabLabel');
-
-      // Reset classes
-      [tabLiveBtn, tabPendingBtn, tabDeletionsBtn].forEach(b => {
-        b.className = 'px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 transition';
-      });
-
-      if (tab === 'live') {
-        tabLiveBtn.className = 'px-3.5 py-2 rounded-lg bg-emerald-600 text-white flex items-center gap-2 transition';
-        currentTabLabel.textContent = 'Live Approved Candidates';
-      } else if (tab === 'pending') {
-        tabPendingBtn.className = 'px-3.5 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold flex items-center gap-2 transition shadow-sm';
-        currentTabLabel.textContent = 'Pending Submissions Awaiting Approval';
-      } else if (tab === 'deletions') {
-        tabDeletionsBtn.className = 'px-3.5 py-2 rounded-lg bg-rose-600 text-white font-bold flex items-center gap-2 transition shadow-sm';
-        currentTabLabel.textContent = 'Candidate Deletion Requests';
-      }
-
-      handleSearchFilter();
+    // Convert snake_case db columns to UI camelCase
+    function normalizeCandidateRecord(c) {
+      return {
+        id: c.id,
+        name: c.name,
+        ballotNo: c.ballot_no,
+        candidateFor: c.candidate_for,
+        division: c.division,
+        department: c.department,
+        batch: c.batch,
+        membershipId: c.membership_id,
+        imageUrl: c.image_url || 'profile.png',
+        education: c.education,
+        professional: c.professional,
+        extraCurricular: c.extra_curricular,
+        manifesto: c.manifesto,
+        phone: c.phone,
+        email: c.email,
+        social: c.social,
+        status: c.status,
+        submitter: { name: c.submitter_name, email: c.submitter_email },
+        deletionRequest: c.deletion_requested ? {
+          reason: c.deletion_reason,
+          details: c.deletion_details,
+          contact: c.deletion_requester,
+          timestamp: c.deletion_requested_at
+        } : null,
+        createdAt: c.created_at
+      };
     }
 
     // Update Counts & Badges
@@ -1361,7 +1180,7 @@
       document.getElementById('statDivisions').textContent = uniqueDivs;
     }
 
-    // Filter Dropdown options
+    // Dynamic Filter Dropdowns
     function populateFilterDropdowns() {
       const postSelect = document.getElementById('filterPost');
       const deptSelect = document.getElementById('filterDepartment');
@@ -1385,7 +1204,7 @@
         divs.map(d => `<option value="${escapeHtml(d)}" ${d === currentDiv ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
     }
 
-    // Filter & Search Engine
+    // Search and Filters
     function handleSearchFilter() {
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
       const post = document.getElementById('filterPost').value;
@@ -1398,7 +1217,6 @@
       else clearBtn.classList.add('hidden');
 
       let filtered = candidates.filter(cand => {
-        // Scope by Admin Tab vs Public
         if (!isAdminLoggedIn) {
           if (cand.status !== 'approved') return false;
         } else {
@@ -1411,7 +1229,6 @@
           }
         }
 
-        // Search text
         if (search) {
           const matchTarget = [
             cand.name, cand.ballotNo, cand.membershipId, cand.batch,
@@ -1421,11 +1238,8 @@
           if (!matchTarget.includes(search)) return false;
         }
 
-        // Post
         if (post && cand.candidateFor !== post) return false;
-        // Dept
         if (dept && cand.department !== dept) return false;
-        // Division
         if (division && cand.division !== division) return false;
 
         return true;
@@ -1438,7 +1252,7 @@
         if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
         if (sortBy === 'batch_asc') return (a.batch || '').localeCompare(b.batch || '');
         if (sortBy === 'batch_desc') return (b.batch || '').localeCompare(a.batch || '');
-        if (sortBy === 'recent') return (b.createdAt || 0) - (a.createdAt || 0);
+        if (sortBy === 'recent') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
         return 0;
       });
 
@@ -1452,7 +1266,6 @@
     }
 
     function renderUI() {
-      updateCountsAndBadges();
       handleSearchFilter();
     }
 
@@ -1469,22 +1282,19 @@
       }
       emptyState.classList.add('hidden');
 
-      // Grid HTML
       gridContainer.innerHTML = items.map(cand => renderCandidateCard(cand)).join('');
-      // Table HTML
       tableBody.innerHTML = items.map(cand => renderCandidateTableRow(cand)).join('');
 
       lucide.createIcons();
     }
 
-    // Render Single Candidate Card
+    // Card Renderer
     function renderCandidateCard(cand) {
       const safeId = escapeHtml(cand.id);
       const img = cand.imageUrl || 'profile.png';
       const isPending = cand.status === 'pending';
       const hasDeletion = cand.deletionRequest != null;
 
-      // Status Tag Header
       let statusBadge = '';
       if (isPending) {
         statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">🟡 Pending Approval</span>`;
@@ -1492,14 +1302,13 @@
         statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-300">🔴 Deletion Requested</span>`;
       }
 
-      // Actions bottom bar
       let actionsHtml = '';
       if (isAdminLoggedIn) {
         if (isPending) {
           actionsHtml = `
             <div class="flex items-center gap-1.5 w-full">
               <button onclick="approveCandidate('${safeId}')" class="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm">
-                <i data-lucide="check" class="w-3.5 h-3.5"></i> Approve
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> Approve & Publish
               </button>
               <button onclick="openEditCandidateModal('${safeId}')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs" title="Edit before approve">
                 <i data-lucide="edit" class="w-3.5 h-3.5"></i>
@@ -1534,7 +1343,6 @@
           `;
         }
       } else {
-        // Public View actions
         actionsHtml = `
           <button onclick="openCandidateDetails('${safeId}')" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 transition">
             <i data-lucide="eye" class="w-3.5 h-3.5"></i> View Details
@@ -1580,7 +1388,6 @@
               </div>
             </div>
 
-            <!-- Deletion Reason Banner if flagged -->
             ${hasDeletion ? `
               <div class="mt-3 p-2 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-800">
                 <strong>Removal Reason:</strong> ${escapeHtml(cand.deletionRequest.reason)}
@@ -1588,10 +1395,9 @@
               </div>
             ` : ''}
 
-            <!-- Submitter info if pending -->
-            ${isPending && cand.submitter ? `
+            ${isPending && cand.submitter && cand.submitter.name ? `
               <div class="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900">
-                <strong>Submitted By:</strong> ${escapeHtml(cand.submitter.name || 'Public')} (${escapeHtml(cand.submitter.email || 'No email')})
+                <strong>Submitted By:</strong> ${escapeHtml(cand.submitter.name)} (${escapeHtml(cand.submitter.email || 'No email')})
               </div>
             ` : ''}
 
@@ -1607,7 +1413,7 @@
       `;
     }
 
-    // Render Single Table Row
+    // Table Renderer
     function renderCandidateTableRow(cand) {
       const safeId = escapeHtml(cand.id);
       const img = cand.imageUrl || 'profile.png';
@@ -1636,32 +1442,18 @@
               </div>
             </div>
           </td>
-          <td class="px-4 py-3 text-xs font-semibold text-emerald-800">
-            ${escapeHtml(cand.candidateFor || '')}
-          </td>
-          <td class="px-4 py-3 text-xs">
-            <strong>${escapeHtml(cand.department || '')}</strong> • ${escapeHtml(cand.batch || '')}
-          </td>
-          <td class="px-4 py-3 font-mono text-xs font-bold text-slate-700">
-            ${escapeHtml(cand.membershipId || 'N/A')}
-          </td>
+          <td class="px-4 py-3 text-xs font-semibold text-emerald-800">${escapeHtml(cand.candidateFor || '')}</td>
+          <td class="px-4 py-3 text-xs"><strong>${escapeHtml(cand.department || '')}</strong> • ${escapeHtml(cand.batch || '')}</td>
+          <td class="px-4 py-3 font-mono text-xs font-bold text-slate-700">${escapeHtml(cand.membershipId || 'N/A')}</td>
           <td class="px-4 py-3">${statusBadge}</td>
           <td class="px-4 py-3 text-right whitespace-nowrap">
             <div class="flex items-center justify-end gap-1">
-              <button onclick="openCandidateDetails('${safeId}')" class="p-1 rounded text-slate-600 hover:text-emerald-600" title="View">
-                <i data-lucide="eye" class="w-4 h-4"></i>
-              </button>
+              <button onclick="openCandidateDetails('${safeId}')" class="p-1 rounded text-slate-600 hover:text-emerald-600" title="View"><i data-lucide="eye" class="w-4 h-4"></i></button>
               ${isAdminLoggedIn ? `
-                <button onclick="openEditCandidateModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-blue-600" title="Edit">
-                  <i data-lucide="edit" class="w-4 h-4"></i>
-                </button>
-                <button onclick="directAdminDelete('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Delete">
-                  <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
+                <button onclick="openEditCandidateModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-blue-600" title="Edit"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                <button onclick="directAdminDelete('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Delete"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               ` : `
-                <button onclick="openRequestDeletionModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Request Removal">
-                  <i data-lucide="flag" class="w-4 h-4"></i>
-                </button>
+                <button onclick="openRequestDeletionModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Request Removal"><i data-lucide="flag" class="w-4 h-4"></i></button>
               `}
             </div>
           </td>
@@ -1670,13 +1462,14 @@
     }
 
     // =========================================================================
-    // CANDIDATE SUBMISSION (ADD / EDIT)
+    // CANDIDATE SUBMISSION WITH SUPABASE STORAGE & DATABASE
     // =========================================================================
     function openCandidateFormModal() {
       document.getElementById('candidateForm').reset();
       document.getElementById('candidateId').value = '';
       document.getElementById('formImagePreview').src = 'profile.png';
-      
+      selectedImageFile = null;
+
       const modal = document.getElementById('candidateFormModal');
       const modalTitle = document.getElementById('formModalTitle');
       const submitBtn = document.getElementById('formSubmitBtnText');
@@ -1718,6 +1511,7 @@
       const img = cand.imageUrl || 'profile.png';
       document.getElementById('formImagePreview').src = img;
       document.getElementById('formImageUrl').value = cand.imageUrl && !cand.imageUrl.startsWith('data:') ? cand.imageUrl : '';
+      selectedImageFile = null;
 
       const modalTitle = document.getElementById('formModalTitle');
       const submitBtn = document.getElementById('formSubmitBtnText');
@@ -1732,136 +1526,181 @@
       document.getElementById('candidateFormModal').classList.add('hidden');
     }
 
-    function handleImageUpload(e) {
+    function handleImageFileSelect(e) {
       const file = e.target.files[0];
       if (!file) return;
+      selectedImageFile = file;
+
       const reader = new FileReader();
       reader.onload = function(evt) {
         document.getElementById('formImagePreview').src = evt.target.result;
       };
       reader.readAsDataURL(file);
+      document.getElementById('photoUploadLabel').textContent = "Photo Selected ✓";
     }
 
     function handleImageUrlChange(url) {
       if (url && url.trim().length > 0) {
         document.getElementById('formImagePreview').src = url.trim();
+        selectedImageFile = null;
       }
     }
 
-    function handleSaveCandidate(event) {
+    async function handleSaveCandidate(event) {
       event.preventDefault();
+
+      const submitBtn = document.getElementById('formSubmitBtn');
+      const originalText = document.getElementById('formSubmitBtnText').textContent;
+      submitBtn.disabled = true;
+      document.getElementById('formSubmitBtnText').textContent = "Saving...";
 
       const id = document.getElementById('candidateId').value;
       const rawName = document.getElementById('formName').value.trim();
       const formattedName = rawName.toLowerCase().startsWith('engr.') ? rawName : `Engr. ${rawName}`;
 
-      const candData = {
+      let finalImageUrl = document.getElementById('formImagePreview').src;
+
+      // Upload photo to Supabase Storage if configured and file is selected
+      if (supabaseClient && selectedImageFile) {
+        try {
+          const fileExt = selectedImageFile.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+          const { data: uploadData, error: uploadError } = await supabaseClient.storage
+            .from('candidate-photos')
+            .upload(fileName, selectedImageFile, { cacheControl: '3600', upsert: true });
+
+          if (!uploadError) {
+            const { data: publicUrlData } = supabaseClient.storage.from('candidate-photos').getPublicUrl(fileName);
+            if (publicUrlData) finalImageUrl = publicUrlData.publicUrl;
+          }
+        } catch (e) {
+          console.warn("Storage upload error:", e);
+        }
+      }
+
+      const dbPayload = {
         name: formattedName,
-        ballotNo: document.getElementById('formBallotNo').value.trim(),
-        candidateFor: document.getElementById('formCandidateFor').value.trim(),
+        ballot_no: document.getElementById('formBallotNo').value.trim(),
+        candidate_for: document.getElementById('formCandidateFor').value.trim(),
         batch: document.getElementById('formBatch').value.trim(),
         department: document.getElementById('formDepartment').value,
-        membershipId: document.getElementById('formMembershipId').value.trim(),
+        membership_id: document.getElementById('formMembershipId').value.trim(),
         division: document.getElementById('formDivision').value.trim(),
         education: document.getElementById('formEducation').value.trim(),
         professional: document.getElementById('formProfessional').value.trim(),
-        extraCurricular: document.getElementById('formExtraCurricular').value.trim(),
+        extra_curricular: document.getElementById('formExtraCurricular').value.trim(),
         manifesto: document.getElementById('formManifesto').value.trim(),
         phone: document.getElementById('formPhone').value.trim(),
         email: document.getElementById('formEmail').value.trim(),
         social: document.getElementById('formSocial').value.trim(),
-        imageUrl: document.getElementById('formImagePreview').src,
-        updatedAt: Date.now()
+        image_url: finalImageUrl,
+        status: isAdminLoggedIn ? 'approved' : 'pending',
+        submitter_name: isAdminLoggedIn ? 'Admin' : (document.getElementById('formSubmitterName').value.trim() || 'Public Submitter'),
+        submitter_email: isAdminLoggedIn ? ADMIN_EMAIL : (document.getElementById('formSubmitterEmail').value.trim() || ''),
+        updated_at: new Date().toISOString()
       };
 
-      if (isAdminLoggedIn) {
-        // Direct publishing by Admin
-        candData.status = 'approved';
-        if (id) {
-          const index = candidates.findIndex(c => c.id === id);
-          if (index !== -1) candidates[index] = { ...candidates[index], ...candData };
-          showToast(`Candidate "${candData.name}" updated successfully!`, 'success');
-        } else {
-          candData.id = 'cand_' + Date.now();
-          candData.createdAt = Date.now();
-          candData.deletionRequest = null;
-          candidates.unshift(candData);
-          showToast(`Candidate "${candData.name}" published directly!`, 'success');
+      if (isAdminLoggedIn && !id) {
+        dbPayload.approved_at = new Date().toISOString();
+      }
+
+      if (supabaseClient) {
+        try {
+          if (id) {
+            const { error } = await supabaseClient.from('candidates').update(dbPayload).eq('id', id);
+            if (error) throw error;
+            showToast(isAdminLoggedIn ? 'Candidate updated!' : 'Update submitted for approval!', 'success');
+          } else {
+            const { error } = await supabaseClient.from('candidates').insert([dbPayload]);
+            if (error) throw error;
+            showToast(isAdminLoggedIn ? 'Candidate published!' : `Submitted! Awaiting approval by ${ADMIN_EMAIL}`, 'success');
+          }
+        } catch (err) {
+          showToast(`Database error: ${err.message}`, 'error');
         }
       } else {
-        // Public Submission Workflow: Requires Admin Approval
-        candData.status = 'pending';
-        candData.submitter = {
-          name: document.getElementById('formSubmitterName').value.trim() || 'Public Submitter',
-          email: document.getElementById('formSubmitterEmail').value.trim() || 'Anonymous'
-        };
-
+        // Fallback local storage
+        const localRecord = normalizeCandidateRecord({ id: id || ('local_' + Date.now()), ...dbPayload });
         if (id) {
-          // Edit suggestion
-          const index = candidates.findIndex(c => c.id === id);
-          if (index !== -1) {
-            candidates[index] = { ...candidates[index], ...candData, status: 'pending' };
-            showToast(`Update submitted! Awaiting approval by ${ADMIN_EMAIL}`, 'info');
-          }
+          const idx = candidates.findIndex(c => c.id === id);
+          if (idx !== -1) candidates[idx] = localRecord;
         } else {
-          // New submission
-          candData.id = 'cand_' + Date.now();
-          candData.createdAt = Date.now();
-          candData.deletionRequest = null;
-          candidates.unshift(candData);
-          showToast(`Submission received! Awaiting review and approval by ${ADMIN_EMAIL}`, 'success');
+          candidates.unshift(localRecord);
         }
+        localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+        showToast(isAdminLoggedIn ? 'Saved locally!' : 'Submitted! Awaiting admin review.', 'success');
       }
 
-      saveCandidatesToStorage();
+      submitBtn.disabled = false;
+      document.getElementById('formSubmitBtnText').textContent = originalText;
       closeCandidateFormModal();
-      renderUI();
+      await loadCandidates();
     }
 
     // =========================================================================
-    // ADMIN APPROVAL & REJECTION ACTIONS
+    // ADMIN ACTIONS (APPROVE, REJECT, DELETE)
     // =========================================================================
-    function approveCandidate(id) {
+    async function approveCandidate(id) {
       if (!isAdminLoggedIn) return;
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
-
-      cand.status = 'approved';
-      cand.approvedAt = Date.now();
-      saveCandidatesToStorage();
-      renderUI();
-      showToast(`Approved & Published: ${cand.name}!`, 'success');
-    }
-
-    function rejectCandidate(id) {
-      if (!isAdminLoggedIn) return;
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
-
-      if (confirm(`Reject candidate submission "${cand.name}"?`)) {
-        candidates = candidates.filter(c => c.id !== id);
-        saveCandidatesToStorage();
-        renderUI();
-        showToast(`Submission for "${cand.name}" rejected.`, 'info');
+      if (supabaseClient) {
+        const { error } = await supabaseClient
+          .from('candidates')
+          .update({ status: 'approved', approved_at: new Date().toISOString() })
+          .eq('id', id);
+        if (error) {
+          showToast('Failed to approve candidate: ' + error.message, 'error');
+          return;
+        }
+      } else {
+        const cand = candidates.find(c => c.id === id);
+        if (cand) cand.status = 'approved';
+        localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
       }
+
+      showToast('Candidate approved and live!', 'success');
+      await loadCandidates();
     }
 
-    // Direct Admin Delete
-    function directAdminDelete(id) {
+    async function rejectCandidate(id) {
       if (!isAdminLoggedIn) return;
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
+      if (!confirm('Reject and remove this pending candidate submission?')) return;
 
-      if (confirm(`Admin confirmation: Permanently delete candidate "${cand.name}"?`)) {
+      if (supabaseClient) {
+        const { error } = await supabaseClient.from('candidates').delete().eq('id', id);
+        if (error) {
+          showToast('Failed to reject: ' + error.message, 'error');
+          return;
+        }
+      } else {
         candidates = candidates.filter(c => c.id !== id);
-        saveCandidatesToStorage();
-        renderUI();
-        showToast(`Candidate removed permanently.`, 'info');
+        localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
       }
+
+      showToast('Submission rejected.', 'info');
+      await loadCandidates();
+    }
+
+    async function directAdminDelete(id) {
+      if (!isAdminLoggedIn) return;
+      if (!confirm('Permanently delete candidate? This cannot be undone.')) return;
+
+      if (supabaseClient) {
+        const { error } = await supabaseClient.from('candidates').delete().eq('id', id);
+        if (error) {
+          showToast('Deletion error: ' + error.message, 'error');
+          return;
+        }
+      } else {
+        candidates = candidates.filter(c => c.id !== id);
+        localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+      }
+
+      showToast('Candidate deleted permanently.', 'info');
+      await loadCandidates();
     }
 
     // =========================================================================
-    // PUBLIC DELETION REQUEST & ADMIN DELETION APPROVAL
+    // DELETION REQUESTS (PUBLIC & ADMIN REVIEW)
     // =========================================================================
     function openRequestDeletionModal(id) {
       const cand = candidates.find(c => c.id === id);
@@ -1878,51 +1717,82 @@
       document.getElementById('requestDeletionModal').classList.add('hidden');
     }
 
-    function handleRequestDeletionSubmit(event) {
+    async function handleRequestDeletionSubmit(event) {
       event.preventDefault();
       const id = document.getElementById('deletionCandidateId').value;
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
-
-      cand.deletionRequest = {
-        reason: document.getElementById('deletionReasonType').value,
-        details: document.getElementById('deletionDetails').value.trim(),
-        contact: document.getElementById('deletionRequesterContact').value.trim(),
-        timestamp: Date.now()
+      const payload = {
+        deletion_requested: true,
+        deletion_reason: document.getElementById('deletionReasonType').value,
+        deletion_details: document.getElementById('deletionDetails').value.trim(),
+        deletion_requester: document.getElementById('deletionRequesterContact').value.trim(),
+        deletion_requested_at: new Date().toISOString()
       };
 
-      saveCandidatesToStorage();
-      closeRequestDeletionModal();
-      renderUI();
-      showToast(`Removal request submitted! Forwarded to admin (${ADMIN_EMAIL}) for approval.`, 'info');
-    }
-
-    function approveDeletion(id) {
-      if (!isAdminLoggedIn) return;
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
-
-      if (confirm(`Approve deletion of "${cand.name}" based on requested reason?`)) {
-        candidates = candidates.filter(c => c.id !== id);
-        saveCandidatesToStorage();
-        renderUI();
-        showToast(`Candidate "${cand.name}" removed per deletion approval.`, 'success');
+      if (supabaseClient) {
+        const { error } = await supabaseClient.from('candidates').update(payload).eq('id', id);
+        if (error) {
+          showToast('Request failed: ' + error.message, 'error');
+          return;
+        }
+      } else {
+        const cand = candidates.find(c => c.id === id);
+        if (cand) {
+          cand.deletionRequest = {
+            reason: payload.deletion_reason,
+            details: payload.deletion_details,
+            contact: payload.deletion_requester,
+            timestamp: payload.deletion_requested_at
+          };
+          localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+        }
       }
+
+      closeRequestDeletionModal();
+      showToast(`Removal request submitted! Forwarded to admin (${ADMIN_EMAIL})`, 'info');
+      await loadCandidates();
     }
 
-    function dismissDeletionRequest(id) {
+    async function approveDeletion(id) {
       if (!isAdminLoggedIn) return;
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
+      if (!confirm('Approve removal and permanently delete candidate from database?')) return;
 
-      cand.deletionRequest = null;
-      saveCandidatesToStorage();
-      renderUI();
-      showToast(`Deletion request dismissed. Candidate remains active.`, 'info');
+      if (supabaseClient) {
+        const { error } = await supabaseClient.from('candidates').delete().eq('id', id);
+        if (error) {
+          showToast('Failed to delete: ' + error.message, 'error');
+          return;
+        }
+      } else {
+        candidates = candidates.filter(c => c.id !== id);
+        localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+      }
+
+      showToast('Candidate removed per approved deletion request.', 'success');
+      await loadCandidates();
+    }
+
+    async function dismissDeletionRequest(id) {
+      if (!isAdminLoggedIn) return;
+      if (supabaseClient) {
+        await supabaseClient.from('candidates').update({
+          deletion_requested: false,
+          deletion_reason: null,
+          deletion_details: null,
+          deletion_requester: null,
+          deletion_requested_at: null
+        }).eq('id', id);
+      } else {
+        const cand = candidates.find(c => c.id === id);
+        if (cand) cand.deletionRequest = null;
+        localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+      }
+
+      showToast('Deletion request dismissed. Candidate remains active.', 'info');
+      await loadCandidates();
     }
 
     // =========================================================================
-    // DETAILS MODAL
+    // CANDIDATE PROFILE DETAILS MODAL
     // =========================================================================
     function openCandidateDetails(id) {
       const cand = candidates.find(c => c.id === id);
@@ -1937,7 +1807,6 @@
       document.getElementById('detailBatch').textContent = cand.batch || 'Alumni';
       document.getElementById('detailMembershipId').textContent = cand.membershipId || 'N/A';
 
-      // Status Badge
       const statusBadge = document.getElementById('detailStatusBadge');
       if (cand.status === 'pending') {
         statusBadge.className = 'px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-400 text-slate-950';
@@ -1947,7 +1816,6 @@
         statusBadge.classList.add('hidden');
       }
 
-      // Manifesto
       const manifestoEl = document.getElementById('detailManifesto');
       if (cand.manifesto) {
         manifestoEl.textContent = `“${cand.manifesto}”`;
@@ -1956,20 +1824,13 @@
         manifestoEl.classList.add('hidden');
       }
 
-      // Qualifications
       document.getElementById('detailEducation').textContent = cand.education || 'No educational details listed.';
       document.getElementById('detailProfessional').textContent = cand.professional || 'No professional experience listed.';
       document.getElementById('detailExtraCurricular').textContent = cand.extraCurricular || 'No extracurricular leadership records listed.';
 
-      // Contact
-      document.getElementById('detailPhone').innerHTML = `
-        <i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-600"></i> ${escapeHtml(cand.phone || 'Phone not listed')}
-      `;
-      document.getElementById('detailEmail').innerHTML = `
-        <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600"></i> ${escapeHtml(cand.email || 'Email not listed')}
-      `;
+      document.getElementById('detailPhone').innerHTML = `<i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-600"></i> ${escapeHtml(cand.phone || 'Phone not listed')}`;
+      document.getElementById('detailEmail').innerHTML = `<i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600"></i> ${escapeHtml(cand.email || 'Email not listed')}`;
 
-      // Social
       const socialLink = document.getElementById('detailSocialLink');
       const socialWrapper = document.getElementById('detailSocialWrapper');
       if (cand.social) {
@@ -1981,15 +1842,13 @@
         socialWrapper.classList.add('hidden');
       }
 
-      // Submitter note
       const submitterNote = document.getElementById('detailSubmitterNote');
-      if (cand.submitter) {
-        submitterNote.textContent = `Submitted by: ${cand.submitter.name} (${cand.submitter.email})`;
+      if (cand.submitter && cand.submitter.name) {
+        submitterNote.textContent = `Submitted by: ${cand.submitter.name} (${cand.submitter.email || 'No email'})`;
       } else {
         submitterNote.textContent = 'IIUC Engineering Fraternity Candidate';
       }
 
-      // Action Buttons
       const actionsContainer = document.getElementById('detailActionBtnsContainer');
       const safeId = escapeHtml(cand.id);
 
@@ -2026,83 +1885,133 @@
     }
 
     // =========================================================================
-    // CLOUD REALTIME SYNC (FIREBASE OPTIONAL INTEGRATION)
+    // ADMIN AUTHENTICATION
     // =========================================================================
-    function openCloudConfigModal() {
-      const stored = localStorage.getItem(STORAGE_KEY_FIREBASE);
-      if (stored) document.getElementById('firebaseConfigInput').value = stored;
-      document.getElementById('cloudConfigModal').classList.remove('hidden');
+    function openAdminLoginModal() {
+      document.getElementById('adminLoginModal').classList.remove('hidden');
       lucide.createIcons();
     }
 
-    function closeCloudConfigModal() {
-      document.getElementById('cloudConfigModal').classList.add('hidden');
+    function closeAdminLoginModal() {
+      document.getElementById('adminLoginModal').classList.add('hidden');
     }
 
-    function saveCloudConfig() {
-      const raw = document.getElementById('firebaseConfigInput').value.trim();
-      try {
-        const parsed = JSON.parse(raw);
-        localStorage.setItem(STORAGE_KEY_FIREBASE, JSON.stringify(parsed));
-        closeCloudConfigModal();
-        initFirebaseIfConfigured();
-        showToast('Firebase cloud connected! Realtime sync active.', 'success');
-      } catch (e) {
-        showToast('Invalid JSON format for Firebase config.', 'error');
+    function handleAdminLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('adminLoginEmail').value.trim();
+      const pin = document.getElementById('adminLoginPasscode').value.trim();
+
+      if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && (pin === ADMIN_DEFAULT_PIN || pin === "armanhossain")) {
+        isAdminLoggedIn = true;
+        localStorage.setItem(STORAGE_KEY_ADMIN_AUTH, ADMIN_EMAIL);
+        closeAdminLoginModal();
+        updateAdminBarUI();
+        loadCandidates();
+        showToast("Welcome Engr. Arman Hossain! Administrator access active.", "success");
+      } else {
+        showToast("Invalid Admin PIN. Default PIN is arman2026", "error");
       }
     }
 
-    function clearCloudConfig() {
-      localStorage.removeItem(STORAGE_KEY_FIREBASE);
-      db = null;
-      document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-slate-400';
-      document.getElementById('cloudStatusText').textContent = 'Local Mode';
-      closeCloudConfigModal();
-      showToast('Cloud disconnected. Using local database.', 'info');
-    }
-
-    function initFirebaseIfConfigured() {
-      const raw = localStorage.getItem(STORAGE_KEY_FIREBASE);
-      if (!raw) {
-        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
-        document.getElementById('cloudStatusText').textContent = 'Local Sync Ready';
+    async function sendSupabaseMagicLink() {
+      if (!supabaseClient) {
+        showToast('Connect Supabase first to use email magic link login.', 'info');
         return;
       }
-
       try {
-        const config = JSON.parse(raw);
-        if (!firebase.apps.length) {
-          firebase.initializeApp(config);
-        }
-        db = firebase.firestore();
-        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-        document.getElementById('cloudStatusText').textContent = 'Cloud Live';
-
-        // Listen for realtime changes
-        db.collection('candidates').onSnapshot((snapshot) => {
-          if (!snapshot.empty) {
-            const cloudCandidates = [];
-            snapshot.forEach(doc => cloudCandidates.push({ id: doc.id, ...doc.data() }));
-            candidates = cloudCandidates;
-            localStorage.setItem(STORAGE_KEY_CANDIDATES, JSON.stringify(candidates));
-            renderUI();
-          }
+        const { error } = await supabaseClient.auth.signInWithOtp({
+          email: ADMIN_EMAIL,
+          options: { emailRedirectTo: window.location.origin }
         });
+        if (error) throw error;
+        showToast(`Magic login link dispatched to ${ADMIN_EMAIL}! Check your inbox.`, 'success');
       } catch (err) {
-        console.error('Firebase init error', err);
+        showToast(`Auth error: ${err.message}`, 'error');
       }
     }
 
-    function syncToCloud() {
-      if (!db) return;
-      candidates.forEach(cand => {
-        const { id, ...data } = cand;
-        db.collection('candidates').doc(id).set(data, { merge: true }).catch(err => console.error(err));
+    function logoutAdmin() {
+      isAdminLoggedIn = false;
+      localStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
+      currentAdminTab = 'live';
+      updateAdminBarUI();
+      loadCandidates();
+      showToast("Admin session ended. Public directory view active.", "info");
+    }
+
+    function setAdminTab(tab) {
+      currentAdminTab = tab;
+      const tabLiveBtn = document.getElementById('tabLiveBtn');
+      const tabPendingBtn = document.getElementById('tabPendingBtn');
+      const tabDeletionsBtn = document.getElementById('tabDeletionsBtn');
+      const currentTabLabel = document.getElementById('currentTabLabel');
+
+      [tabLiveBtn, tabPendingBtn, tabDeletionsBtn].forEach(b => {
+        b.className = 'px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 transition';
       });
+
+      if (tab === 'live') {
+        tabLiveBtn.className = 'px-3.5 py-2 rounded-lg bg-emerald-600 text-white flex items-center gap-2 transition';
+        currentTabLabel.textContent = 'Live Approved Candidates';
+      } else if (tab === 'pending') {
+        tabPendingBtn.className = 'px-3.5 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold flex items-center gap-2 transition shadow-sm';
+        currentTabLabel.textContent = 'Pending Submissions Awaiting Approval';
+      } else if (tab === 'deletions') {
+        tabDeletionsBtn.className = 'px-3.5 py-2 rounded-lg bg-rose-600 text-white font-bold flex items-center gap-2 transition shadow-sm';
+        currentTabLabel.textContent = 'Candidate Deletion Requests';
+      }
+
+      handleSearchFilter();
     }
 
     // =========================================================================
-    // EXPORT / DEMO RESTORE UTILITIES
+    // SUPABASE CONFIG MODAL
+    // =========================================================================
+    function openSupabaseConfigModal() {
+      const stored = localStorage.getItem(STORAGE_KEY_SUPABASE);
+      if (stored) {
+        try {
+          const cfg = JSON.parse(stored);
+          document.getElementById('supabaseUrlInput').value = cfg.supabaseUrl || '';
+          document.getElementById('supabaseAnonKeyInput').value = cfg.supabaseAnonKey || '';
+        } catch (e) {}
+      }
+      document.getElementById('supabaseConfigModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeSupabaseConfigModal() {
+      document.getElementById('supabaseConfigModal').classList.add('hidden');
+    }
+
+    async function saveSupabaseConfig() {
+      const url = document.getElementById('supabaseUrlInput').value.trim();
+      const key = document.getElementById('supabaseAnonKeyInput').value.trim();
+
+      if (!url || !key) {
+        showToast('Please provide both Project URL and Anon Key.', 'error');
+        return;
+      }
+
+      localStorage.setItem(STORAGE_KEY_SUPABASE, JSON.stringify({ supabaseUrl: url, supabaseAnonKey: key }));
+      closeSupabaseConfigModal();
+      await initializeSupabase();
+      await loadCandidates();
+      showToast('Supabase connected successfully!', 'success');
+    }
+
+    function clearSupabaseConfig() {
+      localStorage.removeItem(STORAGE_KEY_SUPABASE);
+      supabaseClient = null;
+      document.getElementById('supabaseStatusDot').className = 'w-2 h-2 rounded-full bg-amber-400';
+      document.getElementById('supabaseStatusText').textContent = 'Local Mode';
+      closeSupabaseConfigModal();
+      showToast('Supabase disconnected. Using local database.', 'info');
+      loadCandidates();
+    }
+
+    // =========================================================================
+    // EXPORT UTILITIES
     // =========================================================================
     function exportToCSV() {
       const liveOnly = candidates.filter(c => c.status === 'approved');
@@ -2133,7 +2042,7 @@
       document.body.appendChild(link);
       link.click();
       link.remove();
-      showToast('Exported candidate list to CSV!', 'success');
+      showToast('Exported candidate directory to CSV!', 'success');
     }
 
     function exportToJSON() {
@@ -2144,16 +2053,7 @@
       document.body.appendChild(link);
       link.click();
       link.remove();
-      showToast('Exported backup to JSON!', 'success');
-    }
-
-    function loadSampleDataConfirm() {
-      if (confirm('Restore sample IIUC candidates and approval demo entries?')) {
-        candidates = [...SAMPLE_CANDIDATES];
-        saveCandidatesToStorage();
-        renderUI();
-        showToast('Sample candidate directory restored!', 'success');
-      }
+      showToast('Exported JSON backup!', 'success');
     }
 
     function clearSearch() {
