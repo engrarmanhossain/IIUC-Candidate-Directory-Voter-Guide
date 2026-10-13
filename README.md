@@ -1,48 +1,46 @@
 # IEB Election — IIUC Candidate Directory & Voter Guide
 
-An interactive, responsive directory and management dashboard for **Institution of Engineers, Bangladesh (IEB)** election candidates representing the **International Islamic University Chittagong (IIUC)** engineering alumni.
+An interactive, responsive directory and candidate management dashboard for the **Institution of Engineers, Bangladesh (IEB)** election candidates representing the **International Islamic University Chittagong (IIUC)** engineering fraternity.
 
-🌐 **Live Demo**: [https://engrarmanhossain.github.io/IIUC-Candidate-Directory-Voter-Guide/](https://engrarmanhossain.github.io/IIUC-Candidate-Directory-Voter-Guide/)
+🌐 **Live Website**: [https://engrarmanhossain.github.io/IIUC-Candidate-Directory-Voter-Guide/](https://engrarmanhossain.github.io/IIUC-Candidate-Directory-Voter-Guide/)
 
 ---
 
-## 🌟 Key Features
+## 🛡️ Admin & Public Approval Workflow
 
-- **Manual Candidate Entry**:
-  - Add candidates via intuitive modal dialog.
-  - Local photo file upload with auto-compression & preview, or image URL.
-  - Auto-formatted title (`Engr. <Name>`), prominent Ballot Number badge.
-  - IIUC Batch, Department (EEE, CSE, CCE, Civil, etc.), IEB Membership ID, Division/Center.
-  - Detailed Educational, Professional, and Extra-Curricular / Social Leadership qualifications.
-  - Campaign Manifesto / Vision, contact phone, email, and LinkedIn profile.
+### 1. Public Submissions (Open to Everyone)
+- **Submit New Candidate**: Anyone can submit a candidate profile with image, name, IIUC batch, department, IEB ID, and qualifications.
+- **Moderation Queue**: New entries are marked as `🟡 Pending Approval` and do **not** appear in the live directory until approved by the administrator.
+- **Request Candidate Removal**: Public users cannot delete candidates directly. Instead, they can click `Request Removal` to submit a removal request along with their reason and contact information.
 
-- **Candidate Edit & Management**:
-  - In-place editing of all fields with real-time UI updates.
-  - Delete with confirmation safeguard.
+### 2. Administrator Dashboard
+- **Admin Email**: `armanhossain.eee.info@gmail.com`
+- **Default Passcode / PIN**: `arman2026`
+- **Admin Controls**:
+  - **Live Candidates**: View and manage all approved entries.
+  - **Pending Submissions**: One-click **Approve & Publish**, **Edit before Approving**, or **Reject**.
+  - **Deletion Requests**: Review removal requests submitted by visitors, with one-click **Confirm Deletion** or **Dismiss**.
+  - **Direct Publishing**: Admins can directly add, edit, or delete any candidate without waiting for approval.
 
-- **Interactive Search & Filtering**:
-  - Instant live search across names, ballot numbers, membership IDs, batches, and keywords.
-  - Filter by candidate post / position, engineering department, and division / center.
-  - Sort by ballot number, name (A-Z), batch, or recently added.
-  - Switch between **Card Grid View** and **Table View**.
+---
 
+## 🌟 Core Features
+
+- **Candidate Entry**: Photo upload (file or URL), Name, Ballot No, Post / Position, Department (EEE, CSE, CCE, Civil, etc.), IIUC Batch, IEB Membership ID, Division / Center.
+- **Qualifications**: Structured sections for Educational, Professional Experience, and Extra-Curricular / Social Leadership qualifications.
+- **Search & Filters**: Real-time multi-filter by department, division, position, and batch with ascending/descending ballot sorting.
+- **Dual Views**: Responsive card grid view and compact data table view.
 - **Export & Print**:
-  - **Export to CSV**: Download an Excel-ready candidate directory spreadsheet.
-  - **Export to JSON**: Backup candidate records.
-  - **Print Voter Guide**: One-click print / PDF export styled as an official voting handout.
-
-- **Offline Persistence**:
-  - Uses browser `localStorage` — works without a backend database.
-  - Pre-seeded with sample candidates for immediate testing.
+  - Export live candidates to **CSV (Excel)** or **JSON**.
+  - Print-ready voter guide layout for campaign flyers and voter ballots.
+- **Realtime Cloud Sync**: Optional one-click Firebase Firestore integration for synchronized multi-device access across all web visitors.
 
 ---
 
-## 💻 Local Development
+## 💻 Local Testing
 
 Run with Node.js:
 ```bash
 node server.js
 ```
-Then open `http://localhost:3000/` in your browser.
-
-Or simply open `index.html` directly in any web browser.
+Then visit `http://localhost:3000/` in your browser.

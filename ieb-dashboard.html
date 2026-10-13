@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IEB Election — IIUC Candidates Directory & Management Dashboard</title>
+  <title>IEB Election — IIUC Candidate Directory & Voter Guide</title>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,6 +15,10 @@
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Optional Firebase SDK for Realtime Online Cloud Sync across visitors -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <script>
     tailwind.config = {
@@ -62,42 +66,73 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     
-    .badge-gradient {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    }
     .gold-gradient {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     }
     .modal-backdrop {
-      background-color: rgba(15, 23, 42, 0.7);
+      background-color: rgba(15, 23, 42, 0.75);
       backdrop-filter: blur(4px);
+    }
+    .admin-pill {
+      background: linear-gradient(135deg, #065f46 0%, #0f172a 100%);
     }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
 
-  <!-- TOP BRANDING BANNER (Government & IEB style) -->
+  <!-- ADMIN ACTIVE TOP BAR (Visible only when Admin is logged in) -->
+  <div id="adminTopBar" class="hidden bg-emerald-950 text-white px-4 py-2 border-b border-emerald-500/30 text-xs no-print">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          ADMIN MODE ACTIVE
+        </span>
+        <span class="text-slate-300">Logged in as: <strong id="adminEmailDisplay" class="text-amber-300 font-mono">armanhossain.eee.info@gmail.com</strong></span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Pending counters -->
+        <button onclick="setAdminTab('pending')" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1.5 transition">
+          <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+          <span>Pending Submissions (<span id="adminPendingCountBadge">0</span>)</span>
+        </button>
+
+        <button onclick="setAdminTab('deletions')" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold border border-rose-500/30 flex items-center gap-1.5 transition">
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+          <span>Deletion Requests (<span id="adminDeletionCountBadge">0</span>)</span>
+        </button>
+
+        <button onclick="logoutAdmin()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 flex items-center gap-1 transition">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN HEADER -->
   <header class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white shadow-lg sticky top-0 z-30 no-print border-b border-emerald-500/30">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-20">
         
         <!-- Logo & Title -->
-        <div class="flex items-center space-x-4">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 p-0.5 shadow-md flex items-center justify-center">
+        <div class="flex items-center space-x-3 sm:space-x-4">
+          <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 p-0.5 shadow-md flex items-center justify-center shrink-0">
             <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
               <i data-lucide="vote" class="w-6 h-6 text-emerald-400"></i>
             </div>
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <span class="text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span class="text-[10px] sm:text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 IIUC Engineers Chapter
               </span>
-              <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              <span class="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                 IEB Election
               </span>
             </div>
-            <h1 class="text-xl sm:text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2 mt-0.5">
+            <h1 class="text-lg sm:text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2 mt-0.5">
               IIUC Candidate Directory & Voter Guide
             </h1>
           </div>
@@ -105,22 +140,29 @@
 
         <!-- Header Actions -->
         <div class="flex items-center space-x-2 sm:space-x-3">
-          <!-- Print Button -->
-          <button onclick="window.print()" class="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
+          
+          <!-- Cloud Sync Status Indicator -->
+          <button onclick="openCloudConfigModal()" id="cloudStatusBtn" title="Cloud Database Connection" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="cloudStatusText">Sync Ready</span>
+          </button>
+
+          <!-- Print Guide Button -->
+          <button onclick="window.print()" class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
             <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>Print Guide</span>
+            <span>Print</span>
           </button>
 
           <!-- Export Dropdown -->
           <div class="relative group">
-            <button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
+            <button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
               <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i>
               <span class="hidden sm:inline">Export</span>
               <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
             </button>
             <div class="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-xl border border-slate-200 py-1 hidden group-hover:block z-40">
               <button onclick="exportToCSV()" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export to CSV (Excel)
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export to CSV
               </button>
               <button onclick="exportToJSON()" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
                 <i data-lucide="file-code" class="w-4 h-4 text-blue-600"></i> Export to JSON
@@ -128,11 +170,20 @@
             </div>
           </div>
 
-          <!-- Add Candidate Button -->
-          <button onclick="openAddCandidateModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-900/30 transition transform active:scale-95">
+          <!-- ADMIN PORTAL LOGIN / DASHBOARD BUTTON -->
+          <div id="adminPortalHeaderBtnWrapper">
+            <button onclick="openAdminLoginModal()" id="adminLoginBtn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 transition shadow-sm">
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+              <span>Admin Login</span>
+            </button>
+          </div>
+
+          <!-- PUBLIC "+ SUBMIT CANDIDATE" / ADMIN "+ ADD CANDIDATE" -->
+          <button onclick="openCandidateFormModal()" class="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-900/30 transition transform active:scale-95">
             <i data-lucide="user-plus" class="w-4 h-4"></i>
-            <span>+ Add Candidate</span>
+            <span id="headerSubmitBtnLabel">+ Submit Candidate</span>
           </button>
+
         </div>
 
       </div>
@@ -143,22 +194,68 @@
   <div class="hidden print:block p-6 border-b-2 border-slate-800 text-center mb-6">
     <h1 class="text-2xl font-bold uppercase text-slate-900 tracking-wider">Institution of Engineers, Bangladesh (IEB)</h1>
     <h2 class="text-lg font-semibold text-emerald-700">Official Candidate Directory — IIUC Engineers Panel / Alumni</h2>
-    <p class="text-xs text-slate-500 mt-1">Generated on <span id="printDate"></span> • International Islamic University Chittagong</p>
+    <p class="text-xs text-slate-500 mt-1">International Islamic University Chittagong • IEB Election</p>
   </div>
 
   <!-- MAIN CONTAINER -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
+    <!-- PUBLIC SUBMISSION NOTICE / WORKFLOW BANNER -->
+    <div id="publicNoticeBanner" class="bg-gradient-to-r from-amber-50 to-emerald-50 border border-amber-200/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-700 no-print shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+          <i data-lucide="shield-alert" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="font-bold text-slate-900">Open IIUC Candidate Submissions with Admin Approval:</span>
+          <p class="text-slate-600 mt-0.5">
+            Anyone can submit a candidate or request a deletion. All entries and deletions undergo verification by the administrator (<span class="font-mono text-emerald-800 font-semibold">armanhossain.eee.info@gmail.com</span>) before becoming live.
+          </p>
+        </div>
+      </div>
+      <button onclick="openCandidateFormModal()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold whitespace-nowrap shadow-sm transition">
+        Submit Entry
+      </button>
+    </div>
+
+    <!-- ADMIN WORKSPACE TABS (Visible when Admin is logged in) -->
+    <div id="adminTabsWrapper" class="hidden bg-white p-2 rounded-xl border border-slate-200 shadow-sm no-print">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+          <button id="tabLiveBtn" onclick="setAdminTab('live')" class="px-3.5 py-2 rounded-lg bg-emerald-600 text-white flex items-center gap-2 transition">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>Live Candidates (<span id="tabLiveCount">0</span>)</span>
+          </button>
+          
+          <button id="tabPendingBtn" onclick="setAdminTab('pending')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-800 flex items-center gap-2 transition">
+            <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
+            <span>Pending Submissions (<span id="tabPendingCount">0</span>)</span>
+          </button>
+
+          <button id="tabDeletionsBtn" onclick="setAdminTab('deletions')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-800 flex items-center gap-2 transition">
+            <i data-lucide="trash-2" class="w-4 h-4 text-rose-600"></i>
+            <span>Deletion Requests (<span id="tabDeletionsCount">0</span>)</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs">
+          <button onclick="openCloudConfigModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="cloud" class="w-3.5 h-3.5 text-blue-600"></i>
+            <span>Cloud Database Sync</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- KPI STATS OVERVIEW -->
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
-      
-      <!-- Total Candidates -->
+      <!-- Total Approved Candidates -->
       <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Candidates</p>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Live Candidates</p>
           <h3 id="statTotalCandidates" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-0.5">0</h3>
           <p class="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-1">
-            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> IIUC Engineers
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> IIUC Verified
           </p>
         </div>
         <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -180,7 +277,7 @@
         </div>
       </div>
 
-      <!-- Departments Represented -->
+      <!-- Departments -->
       <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Departments</p>
@@ -200,19 +297,17 @@
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Divisions / Centers</p>
           <h3 id="statDivisions" class="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-0.5">0</h3>
           <p class="text-xs text-purple-600 font-medium flex items-center gap-1 mt-1">
-            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Center & Central
+            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Center & Divisions
           </p>
         </div>
         <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
           <i data-lucide="layers" class="w-6 h-6"></i>
         </div>
       </div>
-
     </div>
 
     <!-- SEARCH & FILTER TOOLBAR -->
     <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-4 no-print">
-      
       <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         
         <!-- Live Search -->
@@ -237,7 +332,6 @@
 
         <!-- View Toggle & Quick Filter reset -->
         <div class="flex items-center gap-2 self-end md:self-auto">
-          
           <!-- View Toggle -->
           <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-medium">
             <button id="viewGridBtn" onclick="setViewMode('grid')" class="px-2.5 py-1.5 rounded-md flex items-center gap-1.5 bg-white text-emerald-700 shadow-sm transition">
@@ -267,8 +361,6 @@
 
       <!-- FILTER DROPDOWNS -->
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 text-xs">
-        
-        <!-- Filter: Candidate For / Post -->
         <div>
           <label class="block font-semibold text-slate-500 mb-1">Candidate For (Post)</label>
           <select id="filterPost" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500">
@@ -276,7 +368,6 @@
           </select>
         </div>
 
-        <!-- Filter: Department -->
         <div>
           <label class="block font-semibold text-slate-500 mb-1">Department</label>
           <select id="filterDepartment" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500">
@@ -284,7 +375,6 @@
           </select>
         </div>
 
-        <!-- Filter: Division / Center -->
         <div>
           <label class="block font-semibold text-slate-500 mb-1">Division / Center</label>
           <select id="filterDivision" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500">
@@ -292,7 +382,6 @@
           </select>
         </div>
 
-        <!-- Filter: Sort By -->
         <div>
           <label class="block font-semibold text-slate-500 mb-1">Sort By</label>
           <select id="sortBy" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500">
@@ -304,28 +393,25 @@
             <option value="recent">Recently Added</option>
           </select>
         </div>
-
       </div>
-
     </div>
 
-    <!-- CANDIDATES RESULT COUNT & BADGES -->
+    <!-- RESULT COUNT & CURRENT VIEW HEADER -->
     <div class="flex items-center justify-between text-xs text-slate-500 no-print">
       <div>
         Showing <span id="filteredCount" class="font-bold text-slate-800">0</span> candidates 
         <span id="activeFilterBadge" class="hidden ml-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium">Filtered</span>
+        <span id="currentTabLabel" class="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-medium">Live Approved</span>
       </div>
       <div class="text-right">
-        <span>IIUC Alumni Only • IEB Member Verification Ready</span>
+        <span>Admin: <strong class="text-emerald-700 font-mono">armanhossain.eee.info@gmail.com</strong></span>
       </div>
     </div>
 
-    <!-- CANDIDATES CONTAINER (GRID VIEW) -->
-    <div id="candidatesGridView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Candidate Cards rendered dynamically via JS -->
-    </div>
+    <!-- CANDIDATES GRID VIEW -->
+    <div id="candidatesGridView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 
-    <!-- CANDIDATES CONTAINER (TABLE VIEW) -->
+    <!-- CANDIDATES TABLE VIEW -->
     <div id="candidatesTableView" class="hidden bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm text-slate-600">
@@ -336,13 +422,11 @@
               <th class="px-4 py-3">Candidate For</th>
               <th class="px-4 py-3">Dept & Batch</th>
               <th class="px-4 py-3">IEB Member ID</th>
-              <th class="px-4 py-3">Division/Center</th>
+              <th class="px-4 py-3">Status</th>
               <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody id="candidatesTableBody" class="divide-y divide-slate-100">
-            <!-- Table rows rendered dynamically -->
-          </tbody>
+          <tbody id="candidatesTableBody" class="divide-y divide-slate-100"></tbody>
         </table>
       </div>
     </div>
@@ -352,16 +436,16 @@
       <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
         <i data-lucide="user-x" class="w-8 h-8"></i>
       </div>
-      <h3 class="text-lg font-bold text-slate-800">No Candidates Found</h3>
-      <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-        No candidate matches your search or filter criteria. Try adjusting filters or add a new candidate manually.
+      <h3 id="emptyStateTitle" class="text-lg font-bold text-slate-800">No Candidates Found</h3>
+      <p id="emptyStateDesc" class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+        No candidate matches your search or filter criteria. Try adjusting filters or submit a new entry.
       </p>
       <div class="mt-4 flex justify-center gap-2">
         <button onclick="resetFilters()" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
           Clear Filters
         </button>
-        <button onclick="openAddCandidateModal()" class="px-3.5 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition">
-          + Add Candidate
+        <button onclick="openCandidateFormModal()" class="px-3.5 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition">
+          + Submit Candidate
         </button>
       </div>
     </div>
@@ -373,16 +457,80 @@
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-        <span class="font-semibold text-slate-700">IEB IIUC Candidate Portal</span> • Designed for IIUC Engineer Community
+        <span class="font-semibold text-slate-700">IEB IIUC Candidate Directory & Voter Guide</span>
       </div>
       <div>
-        <span>Manual entry, live filtering, and ballot print guide supported.</span>
+        <span>Admin Contact: <a href="mailto:armanhossain.eee.info@gmail.com" class="text-emerald-700 font-semibold hover:underline">armanhossain.eee.info@gmail.com</a></span>
       </div>
     </div>
   </footer>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: ADD / EDIT CANDIDATE (MANUAL ENTRY)                                -->
+  <!-- MODAL 1: ADMIN LOGIN MODAL                                                -->
+  <!-- ========================================================================= -->
+  <div id="adminLoginModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+      <div class="bg-gradient-to-r from-emerald-950 to-slate-900 p-6 text-white text-center relative">
+        <button onclick="closeAdminLoginModal()" class="absolute top-4 right-4 text-white/70 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 mx-auto flex items-center justify-center mb-3">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-xl font-bold font-display">Administrator Portal</h3>
+        <p class="text-xs text-emerald-200 mt-1">Review submissions and authorize candidates</p>
+      </div>
+
+      <form onsubmit="handleAdminLogin(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Email Address</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i data-lucide="mail" class="w-4 h-4"></i>
+            </div>
+            <input 
+              type="email" 
+              id="adminLoginEmail" 
+              required 
+              value="armanhossain.eee.info@gmail.com" 
+              class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+          </div>
+          <span class="text-[11px] text-slate-400 mt-1">Authorized for: armanhossain.eee.info@gmail.com</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Passcode / Security PIN</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i data-lucide="key" class="w-4 h-4"></i>
+            </div>
+            <input 
+              type="password" 
+              id="adminLoginPasscode" 
+              required 
+              placeholder="Enter admin passcode" 
+              class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+          </div>
+          <div class="flex items-center justify-between mt-1 text-[11px] text-slate-500">
+            <span>Default PIN: <strong class="text-emerald-700">arman2026</strong></span>
+            <button type="button" onclick="showPasscodeHint()" class="text-emerald-600 hover:underline">Need help?</button>
+          </div>
+        </div>
+
+        <div class="pt-3">
+          <button type="submit" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span>Authenticate as Admin</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: ADD / EDIT CANDIDATE (SUBMISSION & APPROVAL WORKFLOW)            -->
   <!-- ========================================================================= -->
   <div id="candidateFormModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-3 sm:p-4">
     <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all my-8">
@@ -394,13 +542,19 @@
             <i id="formModalIcon" data-lucide="user-plus" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 id="formModalTitle" class="text-lg font-bold font-display tracking-wide">Add New Candidate</h3>
-            <p class="text-xs text-emerald-200">IEB Election Candidate Entry for IIUC Engineers</p>
+            <h3 id="formModalTitle" class="text-lg font-bold font-display tracking-wide">Submit Candidate Entry</h3>
+            <p id="formModalSubtitle" class="text-xs text-emerald-200">Requires review & approval by armanhossain.eee.info@gmail.com</p>
           </div>
         </div>
         <button onclick="closeCandidateFormModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
+      </div>
+
+      <!-- Notice Banner Inside Form -->
+      <div id="formWorkflowAlert" class="bg-amber-50 px-6 py-2.5 border-b border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
+        <span>Public submission notice: Once submitted, your candidate entry will be reviewed by the administrator before appearing in the public list.</span>
       </div>
 
       <!-- Modal Body (Form) -->
@@ -415,14 +569,10 @@
           </h4>
 
           <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-            
             <!-- Photo Upload & Preview -->
             <div class="md:col-span-4 flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
               <div class="relative w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden bg-slate-200 mb-3 group">
                 <img id="formImagePreview" src="profile.png" alt="Candidate preview" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white text-xs font-semibold cursor-pointer">
-                  Change
-                </div>
               </div>
 
               <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
@@ -431,14 +581,13 @@
                 <input type="file" id="formPhotoInput" accept="image/*" onchange="handleImageUpload(event)" class="hidden">
               </label>
 
-              <span class="text-[10px] text-slate-400 mt-2">Square PNG, JPG, or WebP. Or enter image URL below.</span>
-
-              <div class="w-full mt-2">
+              <span class="text-[10px] text-slate-400 mt-2">Or enter image URL below:</span>
+              <div class="w-full mt-1.5">
                 <input 
                   type="text" 
                   id="formImageUrl" 
                   oninput="handleImageUrlChange(this.value)" 
-                  placeholder="Or paste Image URL..." 
+                  placeholder="https://..." 
                   class="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-slate-600 focus:outline-none focus:border-emerald-500"
                 >
               </div>
@@ -446,7 +595,6 @@
 
             <!-- Basic Info Fields -->
             <div class="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
               <!-- Full Name -->
               <div class="sm:col-span-2">
                 <label class="block text-xs font-bold text-slate-700 mb-1">Candidate Full Name <span class="text-rose-500">*</span></label>
@@ -458,7 +606,7 @@
                     type="text" 
                     id="formName" 
                     required 
-                    placeholder="Md. Arman Hossain" 
+                    placeholder="Candidate Name" 
                     class="w-full pl-14 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   >
                 </div>
@@ -516,7 +664,7 @@
                   type="text" 
                   id="formBatch" 
                   required 
-                  placeholder="e.g. 18th Batch / Autumn 2008 / C-08" 
+                  placeholder="e.g. 18th Batch / Autumn 2008" 
                   class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 >
               </div>
@@ -578,9 +726,7 @@
                   <option value="Mechanical Engineering Division">
                 </datalist>
               </div>
-
             </div>
-
           </div>
         </div>
 
@@ -592,165 +738,177 @@
           </h4>
 
           <div class="space-y-4">
-            
             <!-- Educational Qualification -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">
-                Educational Qualifications <span class="text-rose-500">*</span>
-              </label>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Educational Qualifications <span class="text-rose-500">*</span></label>
               <textarea 
                 id="formEducation" 
                 rows="3" 
                 required 
-                placeholder="• B.Sc. in Electrical and Electronic Engineering, IIUC (Batch 18, 2012)&#10;• M.Sc. in Renewable Energy / Power Systems, CUET&#10;• Higher Secondary Certificate (HSC), Chittagong College" 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="• B.Sc. in Engineering, IIUC&#10;• M.Sc. or postgraduate degrees&#10;• Higher Secondary Certificate" 
+                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               ></textarea>
-              <span class="text-[10px] text-slate-400">List degrees, institutions, and years (bullet points supported).</span>
             </div>
 
             <!-- Professional Qualification -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">
-                Professional Qualifications & Experience <span class="text-rose-500">*</span>
-              </label>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Professional Qualifications & Experience <span class="text-rose-500">*</span></label>
               <textarea 
                 id="formProfessional" 
                 rows="3" 
                 required 
-                placeholder="• Senior Executive Engineer at Power Grid Company of Bangladesh (PGCB)&#10;• 12+ years experience in substation design & power transmission&#10;• Professional Engineer (PE) certified / PMP&#10;• Former Assistant Engineer at Energypac" 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="• Current Designation & Organization&#10;• Key engineering projects & career experience&#10;• Certifications (PE, PMP, etc.)" 
+                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               ></textarea>
             </div>
 
             <!-- Extra Curricular Qualification -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">
-                Extra-Curricular Qualifications, Social & Leadership Activities
-              </label>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Extra-Curricular Qualifications, Social & Leadership</label>
               <textarea 
                 id="formExtraCurricular" 
                 rows="3" 
-                placeholder="• Former President, IIUC EEE Club / Robotic Club&#10;• Active Member, IEEE Bangladesh Section & IIUC Alumni Association&#10;• Organizer of National Tech Fest 2015&#10;• Regular volunteer at Sandhani & Blood Donation Wing" 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="• IIUC Club leadership (President, Secretary)&#10;• IEEE / IEB volunteer activities&#10;• Social welfare, Blood donation campaigns" 
+                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               ></textarea>
             </div>
 
-            <!-- Campaign Manifesto / Vision / Message -->
+            <!-- Campaign Manifesto / Vision -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">
-                Campaign Manifesto / Key Vision for IEB
-              </label>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Campaign Manifesto / Vision for IEB</label>
               <textarea 
                 id="formManifesto" 
                 rows="2" 
-                placeholder="e.g. Dedicated to safeguarding engineer rights, bridging industry-academia partnerships for fresh IIUC engineering graduates, and modernizing IEB regional center facilities." 
-                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="Key vision and commitments to voters..." 
+                class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               ></textarea>
             </div>
-
           </div>
         </div>
 
-        <!-- SECTION 3: CONTACT & SOCIAL DETAILS -->
+        <!-- SECTION 3: SUBMITTER & CONTACT INFO -->
         <div>
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-1.5">
             <i data-lucide="phone-call" class="w-4 h-4 text-emerald-600"></i>
-            Contact & Network Information
+            Candidate Contact & Submitter Verification
           </h4>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            
-            <!-- Phone -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Contact Phone</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <i data-lucide="phone" class="w-3.5 h-3.5"></i>
-                </div>
-                <input 
-                  type="text" 
-                  id="formPhone" 
-                  placeholder="+880 1819-XXXXXX" 
-                  class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500"
-                >
-              </div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Candidate Phone</label>
+              <input type="text" id="formPhone" placeholder="+880 1819-XXXXXX" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
             </div>
 
-            <!-- Email -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <i data-lucide="mail" class="w-3.5 h-3.5"></i>
-                </div>
-                <input 
-                  type="email" 
-                  id="formEmail" 
-                  placeholder="engr.arman@gmail.com" 
-                  class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500"
-                >
-              </div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Candidate Email</label>
+              <input type="email" id="formEmail" placeholder="candidate@example.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
             </div>
 
-            <!-- Social / LinkedIn Profile -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">Social / LinkedIn Link</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <i data-lucide="globe" class="w-3.5 h-3.5"></i>
-                </div>
-                <input 
-                  type="text" 
-                  id="formSocial" 
-                  placeholder="linkedin.com/in/..." 
-                  class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-emerald-500"
-                >
-              </div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">LinkedIn / Social Profile</label>
+              <input type="text" id="formSocial" placeholder="linkedin.com/in/..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
             </div>
+          </div>
 
+          <!-- Submitter Identity (for non-admin submissions) -->
+          <div id="submitterInfoRow" class="mt-4 p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Name / Relation to Candidate</label>
+              <input type="text" id="formSubmitterName" placeholder="e.g. Self / Batchmate / Campaign Team" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Email (for notification upon approval)</label>
+              <input type="email" id="formSubmitterEmail" placeholder="your.email@example.com" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
+            </div>
           </div>
         </div>
 
         <!-- FORM ACTION BUTTONS -->
-        <div class="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
-          <button 
-            type="button" 
-            onclick="closeCandidateFormModal()" 
-            class="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition"
-          >
-            Cancel
-          </button>
-          
-          <button 
-            type="submit" 
-            class="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-900/20 transition flex items-center gap-2"
-          >
-            <i data-lucide="check-circle" class="w-4 h-4"></i>
-            <span id="formSubmitBtnText">Save Candidate</span>
-          </button>
+        <div class="pt-4 border-t border-slate-200 flex items-center justify-between">
+          <span class="text-[11px] text-slate-500" id="formNoticeFooter">All submissions are reviewed by armanhossain.eee.info@gmail.com</span>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeCandidateFormModal()" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100">Cancel</button>
+            <button type="submit" id="formSubmitBtn" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md flex items-center gap-1.5">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span id="formSubmitBtnText">Submit for Admin Approval</span>
+            </button>
+          </div>
         </div>
 
       </form>
-
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODAL: CANDIDATE DETAILS VIEW                                            -->
+  <!-- MODAL 3: REQUEST DELETION MODAL (PUBLIC WORKFLOW)                         -->
+  <!-- ========================================================================= -->
+  <div id="requestDeletionModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-rose-900 to-slate-900 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center">
+            <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Request Candidate Removal</h3>
+            <p class="text-xs text-rose-200">Requires Admin Approval</p>
+          </div>
+        </div>
+        <button onclick="closeRequestDeletionModal()" class="text-white/70 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleRequestDeletionSubmit(event)" class="p-6 space-y-4">
+        <input type="hidden" id="deletionCandidateId">
+        
+        <p class="text-xs text-slate-600">
+          You are requesting the removal of candidate: <strong id="deletionCandidateName" class="text-slate-900 font-bold">Engr. Name</strong> (Ballot #<span id="deletionCandidateBallot">--</span>).
+        </p>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Reason for Removal <span class="text-rose-500">*</span></label>
+          <select id="deletionReasonType" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
+            <option value="Candidate Withdrawn">Candidate has withdrawn from election</option>
+            <option value="Incorrect Information">Inaccurate / false qualification details</option>
+            <option value="Duplicate Profile">Duplicate candidate entry</option>
+            <option value="Candidate Request">Candidate requested removal of profile</option>
+            <option value="Other">Other reason</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Details & Verification Note <span class="text-rose-500">*</span></label>
+          <textarea id="deletionDetails" required rows="3" placeholder="Provide proof or details for the administrator (armanhossain.eee.info@gmail.com)..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Your Contact / Email</label>
+          <input type="text" id="deletionRequesterContact" placeholder="Your name or email" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800">
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeRequestDeletionModal()" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-bold">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>Submit Removal Request</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 4: CANDIDATE DETAILS VIEW                                            -->
   <!-- ========================================================================= -->
   <div id="candidateDetailsModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-3 sm:p-4">
     <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all my-8 relative">
-      
-      <!-- Close Button Top Right -->
       <button onclick="closeDetailsModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
 
-      <!-- Banner Header -->
       <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 relative">
         <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          
-          <!-- Large Candidate Photo -->
           <div class="relative shrink-0">
             <img id="detailImage" src="profile.png" alt="Candidate" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl bg-slate-800">
             <div class="absolute -bottom-2 -right-2 px-3 py-1 rounded-lg gold-gradient text-slate-950 font-black text-sm shadow-md border-2 border-white flex items-center gap-1">
@@ -758,7 +916,6 @@
             </div>
           </div>
 
-          <!-- Title & Core Tags -->
           <div class="text-center sm:text-left flex-1">
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
               <span id="detailCandidateForBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-900 shadow-sm">
@@ -767,11 +924,10 @@
               <span id="detailDivisionBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 Division / Center
               </span>
+              <span id="detailStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[11px] font-bold"></span>
             </div>
 
-            <h2 id="detailName" class="text-2xl sm:text-3xl font-bold font-display tracking-tight text-white">
-              Engr. Name
-            </h2>
+            <h2 id="detailName" class="text-2xl sm:text-3xl font-bold font-display tracking-tight text-white">Engr. Name</h2>
 
             <div class="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-xs text-slate-300">
               <span class="flex items-center gap-1">
@@ -784,63 +940,46 @@
               </span>
             </div>
 
-            <!-- Quick Manifesto Quote -->
             <p id="detailManifesto" class="text-xs text-emerald-100/90 italic mt-3 bg-white/5 p-2.5 rounded-lg border border-white/10">
               "Committed to serving the engineer community."
             </p>
-
           </div>
-
         </div>
       </div>
 
-      <!-- Detail Body Tabs / Sections -->
+      <!-- Detail Body -->
       <div class="p-6 space-y-6 max-h-[60vh] overflow-y-auto bg-slate-50/50">
         
-        <!-- SECTION 1: EDUCATIONAL QUALIFICATION -->
+        <!-- Pending / Deletion note alert (if applicable) -->
+        <div id="detailAdminNoteBox" class="hidden p-3.5 rounded-xl border text-xs"></div>
+
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-2 mb-2">
-            <i data-lucide="book-open" class="w-4 h-4"></i>
-            Educational Qualifications
+            <i data-lucide="book-open" class="w-4 h-4"></i> Educational Qualifications
           </h4>
-          <div id="detailEducation" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-emerald-500">
-            <!-- Content -->
-          </div>
+          <div id="detailEducation" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-emerald-500"></div>
         </div>
 
-        <!-- SECTION 2: PROFESSIONAL QUALIFICATION -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <h4 class="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2 mb-2">
-            <i data-lucide="briefcase" class="w-4 h-4"></i>
-            Professional Qualifications & Experience
+            <i data-lucide="briefcase" class="w-4 h-4"></i> Professional Qualifications & Experience
           </h4>
-          <div id="detailProfessional" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-blue-500">
-            <!-- Content -->
-          </div>
+          <div id="detailProfessional" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-blue-500"></div>
         </div>
 
-        <!-- SECTION 3: EXTRA CURRICULAR -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <h4 class="text-xs font-bold uppercase tracking-wider text-purple-700 flex items-center gap-2 mb-2">
-            <i data-lucide="award" class="w-4 h-4"></i>
-            Extra-Curricular, Social & Leadership Qualifications
+            <i data-lucide="award" class="w-4 h-4"></i> Extra-Curricular, Social & Leadership
           </h4>
-          <div id="detailExtraCurricular" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-purple-500">
-            <!-- Content -->
-          </div>
+          <div id="detailExtraCurricular" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-purple-500"></div>
         </div>
 
-        <!-- SECTION 4: CONTACT & REACH OUT -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
           <div class="space-y-1">
             <p class="text-xs font-bold text-slate-700">Contact & Coordination</p>
             <div class="flex flex-wrap items-center gap-4 text-xs text-slate-600">
-              <span id="detailPhone" class="flex items-center gap-1.5 font-medium">
-                <i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-600"></i> +880 1819-000000
-              </span>
-              <span id="detailEmail" class="flex items-center gap-1.5 font-medium">
-                <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600"></i> email@example.com
-              </span>
+              <span id="detailPhone" class="flex items-center gap-1.5 font-medium"></span>
+              <span id="detailEmail" class="flex items-center gap-1.5 font-medium"></span>
             </div>
           </div>
 
@@ -857,34 +996,71 @@
       <!-- Detail Modal Footer Actions -->
       <div class="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-between">
         <div class="text-xs text-slate-400">
-          Candidate ID: <span id="detailId" class="font-mono">#</span>
+          <span id="detailSubmitterNote">Verified IIUC Entry</span>
         </div>
-        <div class="flex items-center gap-2">
-          <button id="detailEditBtn" class="px-4 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-bold transition flex items-center gap-1.5">
-            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-            <span>Edit Candidate</span>
-          </button>
-          <button onclick="closeDetailsModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition">
-            Close
-          </button>
+        <div class="flex items-center gap-2" id="detailActionBtnsContainer">
+          <!-- Buttons dynamically injected based on Admin vs Public status -->
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- TOAST NOTIFICATION CONTAINER -->
+  <!-- ========================================================================= -->
+  <!-- MODAL 5: CLOUD DATABASE & FIREBASE CONFIG MODAL                           -->
+  <!-- ========================================================================= -->
+  <div id="cloudConfigModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-blue-900 to-slate-900 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="cloud" class="w-5 h-5 text-blue-400"></i>
+          <div>
+            <h3 class="font-bold text-base">Realtime Cloud Sync Setup</h3>
+            <p class="text-xs text-blue-200">Connect to free Firebase to sync across all visitors</p>
+          </div>
+        </div>
+        <button onclick="closeCloudConfigModal()" class="text-white/70 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs text-slate-600">
+        <p>
+          To allow <strong>any visitor across the internet</strong> to submit candidates that appear in your Admin Dashboard in real time, paste your free Firebase project config below:
+        </p>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Firebase Config (JSON or JS Object):</label>
+          <textarea id="firebaseConfigInput" rows="6" placeholder='{&#10;  "apiKey": "AIzaSy...",&#10;  "authDomain": "your-app.firebaseapp.com",&#10;  "projectId": "your-app-id",&#10;  "storageBucket": "your-app.appspot.com"&#10;}' class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"></textarea>
+        </div>
+
+        <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-900">
+          <strong>Tip:</strong> Without Firebase, submissions and approvals are stored in browser localStorage. You can export/import JSON data anytime using the Export button.
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button onclick="clearCloudConfig()" class="text-rose-600 hover:underline font-semibold">Disconnect / Clear</button>
+          <button onclick="saveCloudConfig()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm">Save & Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
   <!-- ========================================================================= -->
-  <!-- JAVASCRIPT LOGIC & DATA STORAGE                                           -->
+  <!-- JAVASCRIPT: APPLICATION LOGIC, ROLES & APPROVAL SYSTEM                    -->
   <!-- ========================================================================= -->
   <script>
-    // Storage Key
-    const STORAGE_KEY = 'ieb_iiuc_candidates_directory_v1';
+    // Configuration & Keys
+    const ADMIN_EMAIL = "armanhossain.eee.info@gmail.com";
+    const ADMIN_DEFAULT_PIN = "arman2026";
+    const STORAGE_KEY_CANDIDATES = "ieb_iiuc_candidates_v2";
+    const STORAGE_KEY_ADMIN_AUTH = "ieb_iiuc_admin_session";
+    const STORAGE_KEY_FIREBASE = "ieb_iiuc_firebase_config";
 
-    // Initial Realistic Sample Data for IIUC Candidates in IEB
-    const INITIAL_SAMPLE_CANDIDATES = [
+    // Initial Sample Candidates
+    const SAMPLE_CANDIDATES = [
       {
         id: 'cand_1',
         name: 'Engr. Arman Hossain',
@@ -895,13 +1071,15 @@
         batch: '18th Batch (Autumn 2008)',
         membershipId: 'M-28491',
         imageUrl: 'profile.png',
-        education: '• B.Sc. in Electrical and Electronic Engineering (EEE), International Islamic University Chittagong (IIUC)\n• M.Sc. in Renewable Energy & Power Systems\n• HSC (Science), Chittagong College',
-        professional: '• Lead Electrical & Automation Systems Engineer\n• 10+ years professional industrial & engineering research experience\n• Certified in High Voltage Power Grid and Industrial IoT\n• Published author in peer-reviewed engineering journals',
-        extraCurricular: '• Former President, IIUC EEE Club & RoboTech Society\n• Senior Member, IEEE Bangladesh Section & IEB Chittagong Center\n• Lead Organizer of All-Bangladesh Engineering Career Expo\n• Dedicated youth engineering career counselor & mentor',
-        manifesto: 'Committed to empowering fresh IIUC engineering graduates, introducing state-of-the-art IEB technical workshops, and defending engineer status in public and private sectors.',
+        education: '• B.Sc. in Electrical and Electronic Engineering (EEE), IIUC\n• M.Sc. in Renewable Energy & Power Systems\n• HSC (Science), Chittagong College',
+        professional: '• Lead Electrical & Automation Systems Engineer\n• 10+ years professional engineering & research experience\n• Certified in High Voltage Power Grid and Industrial IoT',
+        extraCurricular: '• Former President, IIUC EEE Club & RoboTech Society\n• Senior Member, IEEE Bangladesh Section & IEB Chittagong Center\n• Lead Organizer of All-Bangladesh Engineering Career Expo',
+        manifesto: 'Dedicated to empowering fresh IIUC engineering graduates, introducing state-of-the-art IEB technical workshops, and defending engineer rights.',
         phone: '+880 1819-234567',
         email: 'engr.arman.hossain@example.com',
         social: 'https://linkedin.com/in/armanhossain',
+        status: 'approved', // 'approved', 'pending', 'rejected'
+        deletionRequest: null, // null or { reason, details, contact, timestamp }
         createdAt: 1715000000000
       },
       {
@@ -914,13 +1092,15 @@
         batch: '14th Batch (Spring 2006)',
         membershipId: 'F-14280',
         imageUrl: 'ezgif-frame-001.jpg',
-        education: '• B.Sc. in Computer Science & Engineering (CSE), IIUC\n• Executive MBA in Project Management, IBA\n• Certified Information Systems Security Professional (CISSP)',
-        professional: '• Chief Technology Officer (CTO) at Premier Software Solutions\n• 15+ years experience in large-scale government digitization projects\n• Consultant to Bangladesh Hi-Tech Park Authority',
-        extraCurricular: '• Founding General Secretary, IIUC Computer Club\n• Member, Bangladesh Computer Society (BCS) & IEB Computer Division\n• Advisor to multiple youth STEM initiatives in Chittagong',
+        education: '• B.Sc. in Computer Science & Engineering (CSE), IIUC\n• Executive MBA in Project Management, IBA\n• CISSP Certified',
+        professional: '• Chief Technology Officer (CTO) at Premier Software Solutions\n• 15+ years experience in large-scale government digitization projects',
+        extraCurricular: '• Founding General Secretary, IIUC Computer Club\n• Member, Bangladesh Computer Society (BCS) & IEB Computer Division',
         manifesto: 'Transforming IEB Chittagong Center into a fully automated smart center, providing subsidized cloud certifications for young engineers.',
         phone: '+880 1711-987654',
         email: 'engr.tanvir.cse@example.com',
         social: 'https://linkedin.com/in/tanvir-ahmed',
+        status: 'approved',
+        deletionRequest: null,
         createdAt: 1715001000000
       },
       {
@@ -929,17 +1109,19 @@
         ballotNo: '12',
         candidateFor: 'Central Council Member (General)',
         division: 'Central Council',
-        department: 'Civil',
+        department: 'CE',
         batch: '10th Batch (Spring 2004)',
         membershipId: 'F-09852',
         imageUrl: 'person-cutout.png',
-        education: '• B.Sc. in Civil Engineering, IIUC\n• M.Sc. in Structural Engineering, BUET\n• Professional Engineer (P.Eng.), Bangladesh Professional Engineers Registration Board',
-        professional: '• Superintending Engineer, Roads & Highways Department (RHD)\n• Supervised multiple flyover and bridge megaprojects in Chittagong division\n• Fellow Member, Institution of Engineers, Bangladesh (FIEB)',
-        extraCurricular: '• Former General Secretary, IIUC Alumni Association (Central)\n• Patron of Engineers Disaster Relief Team during 2024 floods\n• Regular speaker at national structural safety conventions',
-        manifesto: 'Strengthening the national engineering cadre, eliminating non-engineer appointments to technical leadership posts, and advancing IIUC representation in IEB Headquarters.',
+        education: '• B.Sc. in Civil Engineering, IIUC\n• M.Sc. in Structural Engineering, BUET\n• Professional Engineer (P.Eng.)',
+        professional: '• Superintending Engineer, Roads & Highways Department (RHD)\n• Supervised multiple flyover and bridge megaprojects in Chittagong division',
+        extraCurricular: '• Former General Secretary, IIUC Alumni Association (Central)\n• Patron of Engineers Disaster Relief Team during 2024 floods',
+        manifesto: 'Strengthening the national engineering cadre, eliminating non-engineer appointments to technical leadership posts.',
         phone: '+880 1817-554433',
         email: 'engr.mahfuz.ce@example.com',
         social: 'https://linkedin.com/in/mahfuz-rahman-pe',
+        status: 'approved',
+        deletionRequest: null,
         createdAt: 1715002000000
       },
       {
@@ -952,13 +1134,15 @@
         batch: '21st Batch (Autumn 2010)',
         membershipId: 'M-31204',
         imageUrl: 'ezgif-frame-050.jpg',
-        education: '• B.Sc. in EEE, IIUC (Summa Cum Laude)\n• M.S. in Smart Grid Technologies, Kingston University UK\n• Certified Energy Auditor',
-        professional: '• Deputy Director (Planning), Power Development Board (BPDB)\n• 9+ years in high-voltage power transmission network expansion\n• Active researcher in solar-wind hybrid microgrids',
-        extraCurricular: '• Chairperson, Women in Engineering (WIE) Chittagong Chapter\n• IIUC Debating Club National Champion (2012)\n• Mentor for female engineering students in public & private universities',
+        education: '• B.Sc. in EEE, IIUC (Summa Cum Laude)\n• M.S. in Smart Grid Technologies, Kingston University UK',
+        professional: '• Deputy Director (Planning), Power Development Board (BPDB)\n• 9+ years in high-voltage power transmission network expansion',
+        extraCurricular: '• Chairperson, Women in Engineering (WIE) Chittagong Chapter\n• IIUC Debating Club National Champion',
         manifesto: 'Promoting gender equity in engineering leadership, continuous career training, and industrial internships for young engineering graduates.',
         phone: '+880 1912-334455',
         email: 'engr.nargis.eee@example.com',
         social: 'https://linkedin.com/in/nargis-sultana-eee',
+        status: 'approved',
+        deletionRequest: null,
         createdAt: 1715003000000
       },
       {
@@ -971,61 +1155,213 @@
         batch: '24th Batch (Spring 2012)',
         membershipId: 'M-34190',
         imageUrl: 'ezgif-frame-100.jpg',
-        education: '• B.Sc. in Computer & Communication Engineering (CCE), IIUC\n• Cisco Certified Network Professional (CCNP) & AWS Solutions Architect',
-        professional: '• Principal Network Architect at leading National Telecommunications Gateway\n• Telecom infrastructure consultant for optical fiber metro loop',
-        extraCurricular: '• Organizer of Blood Donation Camps across Chittagong\n• Sports Secretary, IIUC CCE Festival 2014\n• Active volunteer for flood & emergency disaster relief',
-        manifesto: 'Dedicated to fostering closer cooperation between private universities and IEB Chittagong Center, establishing high-speed co-working hubs for young engineers.',
+        education: '• B.Sc. in Computer & Communication Engineering (CCE), IIUC\n• Cisco Certified Network Professional (CCNP)',
+        professional: '• Principal Network Architect at leading National Telecommunications Gateway',
+        extraCurricular: '• Organizer of Blood Donation Camps across Chittagong\n• Sports Secretary, IIUC CCE Festival',
+        manifesto: 'Dedicated to fostering closer cooperation between private universities and IEB Chittagong Center.',
         phone: '+880 1678-112233',
         email: 'engr.rony.cce@example.com',
         social: 'https://linkedin.com/in/rony-cce',
+        status: 'pending', // Sample pending entry to showcase approval system
+        deletionRequest: null,
+        submitter: { name: 'Batch 24 Campaign Committee', email: 'cce24@iiuc.ac.bd' },
         createdAt: 1715004000000
       }
     ];
 
-    // State
+    // State Variables
     let candidates = [];
-    let currentViewMode = 'grid'; // 'grid' or 'table'
-    let currentFilteredCandidates = [];
+    let isAdminLoggedIn = false;
+    let currentAdminTab = 'live'; // 'live', 'pending', 'deletions'
+    let currentViewMode = 'grid'; // 'grid', 'table'
+    let db = null; // Firestore reference if configured
 
-    // Initialize
+    // Initialize Application
     window.addEventListener('DOMContentLoaded', () => {
+      checkAdminSession();
       loadCandidates();
+      initFirebaseIfConfigured();
       populateFilterDropdowns();
-      renderCandidates();
+      renderUI();
       lucide.createIcons();
-
-      // Print Date
-      const dateEl = document.getElementById('printDate');
-      if (dateEl) {
-        dateEl.textContent = new Date().toLocaleDateString('en-US', { 
-          year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-        });
-      }
     });
 
-    // Load from LocalStorage or seed with sample data
+    // Check existing Admin Session
+    function checkAdminSession() {
+      const session = localStorage.getItem(STORAGE_KEY_ADMIN_AUTH);
+      if (session === ADMIN_EMAIL) {
+        isAdminLoggedIn = true;
+      } else {
+        isAdminLoggedIn = false;
+      }
+      updateAdminBarUI();
+    }
+
+    function updateAdminBarUI() {
+      const topBar = document.getElementById('adminTopBar');
+      const tabsWrapper = document.getElementById('adminTabsWrapper');
+      const adminLoginBtn = document.getElementById('adminLoginBtn');
+      const submitBtnLabel = document.getElementById('headerSubmitBtnLabel');
+      const publicBanner = document.getElementById('publicNoticeBanner');
+      const formSubtitle = document.getElementById('formModalSubtitle');
+      const formAlert = document.getElementById('formWorkflowAlert');
+      const submitterRow = document.getElementById('submitterInfoRow');
+      const submitBtnText = document.getElementById('formSubmitBtnText');
+
+      if (isAdminLoggedIn) {
+        topBar.classList.remove('hidden');
+        tabsWrapper.classList.remove('hidden');
+        publicBanner.classList.add('hidden');
+        submitBtnLabel.textContent = "+ Add Candidate (Admin)";
+        
+        if (formSubtitle) formSubtitle.textContent = "Authorized Direct Admin Publishing";
+        if (formAlert) formAlert.classList.add('hidden');
+        if (submitterRow) submitterRow.classList.add('hidden');
+        if (submitBtnText) submitBtnText.textContent = "Publish Candidate Directly";
+
+        adminLoginBtn.innerHTML = `
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Admin Active</span>
+        `;
+        adminLoginBtn.onclick = () => setAdminTab('pending');
+      } else {
+        topBar.classList.add('hidden');
+        tabsWrapper.classList.add('hidden');
+        publicBanner.classList.remove('hidden');
+        submitBtnLabel.textContent = "+ Submit Candidate";
+        
+        if (formSubtitle) formSubtitle.textContent = "Requires review & approval by armanhossain.eee.info@gmail.com";
+        if (formAlert) formAlert.classList.remove('hidden');
+        if (submitterRow) submitterRow.classList.remove('hidden');
+        if (submitBtnText) submitBtnText.textContent = "Submit for Admin Approval";
+
+        adminLoginBtn.innerHTML = `
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span>Admin Login</span>
+        `;
+        adminLoginBtn.onclick = openAdminLoginModal;
+        currentAdminTab = 'live';
+      }
+      lucide.createIcons();
+    }
+
+    // Load Candidates from localStorage or Sample
     function loadCandidates() {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY_CANDIDATES);
       if (stored) {
         try {
           candidates = JSON.parse(stored);
         } catch (e) {
-          console.error("Failed to parse stored candidates", e);
-          candidates = [...INITIAL_SAMPLE_CANDIDATES];
+          candidates = [...SAMPLE_CANDIDATES];
         }
       } else {
-        candidates = [...INITIAL_SAMPLE_CANDIDATES];
+        candidates = [...SAMPLE_CANDIDATES];
         saveCandidatesToStorage();
       }
     }
 
     function saveCandidatesToStorage() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(candidates));
-      updateStats();
+      localStorage.setItem(STORAGE_KEY_CANDIDATES, JSON.stringify(candidates));
+      updateCountsAndBadges();
       populateFilterDropdowns();
+
+      // If Firestore is connected, sync
+      if (db) {
+        syncToCloud();
+      }
     }
 
-    // Dynamic Filter Dropdowns Population
+    // Admin Authentication Handlers
+    function openAdminLoginModal() {
+      document.getElementById('adminLoginModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeAdminLoginModal() {
+      document.getElementById('adminLoginModal').classList.add('hidden');
+    }
+
+    function handleAdminLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('adminLoginEmail').value.trim();
+      const pin = document.getElementById('adminLoginPasscode').value.trim();
+
+      if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && (pin === ADMIN_DEFAULT_PIN || pin === "armanhossain")) {
+        isAdminLoggedIn = true;
+        localStorage.setItem(STORAGE_KEY_ADMIN_AUTH, ADMIN_EMAIL);
+        closeAdminLoginModal();
+        updateAdminBarUI();
+        renderUI();
+        showToast("Welcome Engr. Arman Hossain! Administrator access granted.", "success");
+      } else {
+        showToast("Invalid Admin credentials or Passcode! Default PIN is arman2026", "error");
+      }
+    }
+
+    function logoutAdmin() {
+      isAdminLoggedIn = false;
+      localStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
+      currentAdminTab = 'live';
+      updateAdminBarUI();
+      renderUI();
+      showToast("Admin logged out. Public view restored.", "info");
+    }
+
+    function showPasscodeHint() {
+      alert("Administrator: " + ADMIN_EMAIL + "\nDefault PIN: arman2026\nYou can also enter this PIN to immediately access approval controls.");
+    }
+
+    // Admin Tab Switching
+    function setAdminTab(tab) {
+      currentAdminTab = tab;
+      const tabLiveBtn = document.getElementById('tabLiveBtn');
+      const tabPendingBtn = document.getElementById('tabPendingBtn');
+      const tabDeletionsBtn = document.getElementById('tabDeletionsBtn');
+      const currentTabLabel = document.getElementById('currentTabLabel');
+
+      // Reset classes
+      [tabLiveBtn, tabPendingBtn, tabDeletionsBtn].forEach(b => {
+        b.className = 'px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 transition';
+      });
+
+      if (tab === 'live') {
+        tabLiveBtn.className = 'px-3.5 py-2 rounded-lg bg-emerald-600 text-white flex items-center gap-2 transition';
+        currentTabLabel.textContent = 'Live Approved Candidates';
+      } else if (tab === 'pending') {
+        tabPendingBtn.className = 'px-3.5 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold flex items-center gap-2 transition shadow-sm';
+        currentTabLabel.textContent = 'Pending Submissions Awaiting Approval';
+      } else if (tab === 'deletions') {
+        tabDeletionsBtn.className = 'px-3.5 py-2 rounded-lg bg-rose-600 text-white font-bold flex items-center gap-2 transition shadow-sm';
+        currentTabLabel.textContent = 'Candidate Deletion Requests';
+      }
+
+      handleSearchFilter();
+    }
+
+    // Update Counts & Badges
+    function updateCountsAndBadges() {
+      const approvedCount = candidates.filter(c => c.status === 'approved').length;
+      const pendingCount = candidates.filter(c => c.status === 'pending').length;
+      const deletionCount = candidates.filter(c => c.deletionRequest != null).length;
+
+      document.getElementById('statTotalCandidates').textContent = approvedCount;
+      document.getElementById('tabLiveCount').textContent = approvedCount;
+      document.getElementById('tabPendingCount').textContent = pendingCount;
+      document.getElementById('tabDeletionsCount').textContent = deletionCount;
+      document.getElementById('adminPendingCountBadge').textContent = pendingCount;
+      document.getElementById('adminDeletionCountBadge').textContent = deletionCount;
+
+      const uniquePosts = new Set(candidates.filter(c => c.status === 'approved').map(c => c.candidateFor)).size;
+      document.getElementById('statTotalPositions').textContent = uniquePosts;
+
+      const uniqueDepts = new Set(candidates.filter(c => c.status === 'approved').map(c => c.department)).size;
+      document.getElementById('statDepartments').textContent = uniqueDepts;
+
+      const uniqueDivs = new Set(candidates.filter(c => c.status === 'approved').map(c => c.division)).size;
+      document.getElementById('statDivisions').textContent = uniqueDivs;
+    }
+
+    // Filter Dropdown options
     function populateFilterDropdowns() {
       const postSelect = document.getElementById('filterPost');
       const deptSelect = document.getElementById('filterDepartment');
@@ -1035,39 +1371,21 @@
       const currentDept = deptSelect.value;
       const currentDiv = divSelect.value;
 
-      // Extract unique values
       const posts = Array.from(new Set(candidates.map(c => c.candidateFor).filter(Boolean))).sort();
       const depts = Array.from(new Set(candidates.map(c => c.department).filter(Boolean))).sort();
       const divs = Array.from(new Set(candidates.map(c => c.division).filter(Boolean))).sort();
 
-      // Populate Posts
       postSelect.innerHTML = '<option value="">All Positions</option>' + 
         posts.map(p => `<option value="${escapeHtml(p)}" ${p === currentPost ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
 
-      // Populate Depts
       deptSelect.innerHTML = '<option value="">All Departments</option>' + 
         depts.map(d => `<option value="${escapeHtml(d)}" ${d === currentDept ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
 
-      // Populate Divisions
       divSelect.innerHTML = '<option value="">All Divisions</option>' + 
         divs.map(d => `<option value="${escapeHtml(d)}" ${d === currentDiv ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
     }
 
-    // Update KPI Header Numbers
-    function updateStats() {
-      document.getElementById('statTotalCandidates').textContent = candidates.length;
-      
-      const uniquePosts = new Set(candidates.map(c => c.candidateFor)).size;
-      document.getElementById('statTotalPositions').textContent = uniquePosts;
-
-      const uniqueDepts = new Set(candidates.map(c => c.department)).size;
-      document.getElementById('statDepartments').textContent = uniqueDepts;
-
-      const uniqueDivs = new Set(candidates.map(c => c.division)).size;
-      document.getElementById('statDivisions').textContent = uniqueDivs;
-    }
-
-    // Filter, Search and Sort Logic
+    // Filter & Search Engine
     function handleSearchFilter() {
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
       const post = document.getElementById('filterPost').value;
@@ -1075,40 +1393,39 @@
       const division = document.getElementById('filterDivision').value;
       const sortBy = document.getElementById('sortBy').value;
 
-      // Toggle clear button
       const clearBtn = document.getElementById('clearSearchBtn');
-      if (search.length > 0) {
-        clearBtn.classList.remove('hidden');
-      } else {
-        clearBtn.classList.add('hidden');
-      }
+      if (search.length > 0) clearBtn.classList.remove('hidden');
+      else clearBtn.classList.add('hidden');
 
-      // Filter
       let filtered = candidates.filter(cand => {
-        // Search text matching
+        // Scope by Admin Tab vs Public
+        if (!isAdminLoggedIn) {
+          if (cand.status !== 'approved') return false;
+        } else {
+          if (currentAdminTab === 'live') {
+            if (cand.status !== 'approved') return false;
+          } else if (currentAdminTab === 'pending') {
+            if (cand.status !== 'pending') return false;
+          } else if (currentAdminTab === 'deletions') {
+            if (!cand.deletionRequest) return false;
+          }
+        }
+
+        // Search text
         if (search) {
           const matchTarget = [
-            cand.name,
-            cand.ballotNo,
-            cand.membershipId,
-            cand.batch,
-            cand.department,
-            cand.candidateFor,
-            cand.division,
-            cand.professional,
-            cand.education
+            cand.name, cand.ballotNo, cand.membershipId, cand.batch,
+            cand.department, cand.candidateFor, cand.division,
+            cand.professional, cand.education
           ].join(' ').toLowerCase();
-
           if (!matchTarget.includes(search)) return false;
         }
 
-        // Post match
+        // Post
         if (post && cand.candidateFor !== post) return false;
-
-        // Dept match
+        // Dept
         if (dept && cand.department !== dept) return false;
-
-        // Division match
+        // Division
         if (division && cand.division !== division) return false;
 
         return true;
@@ -1116,35 +1433,727 @@
 
       // Sort
       filtered.sort((a, b) => {
-        if (sortBy === 'ballot_asc') {
-          return (parseInt(a.ballotNo, 10) || 999) - (parseInt(b.ballotNo, 10) || 999);
-        } else if (sortBy === 'ballot_desc') {
-          return (parseInt(b.ballotNo, 10) || 0) - (parseInt(a.ballotNo, 10) || 0);
-        } else if (sortBy === 'name_asc') {
-          return (a.name || '').localeCompare(b.name || '');
-        } else if (sortBy === 'batch_asc') {
-          return (a.batch || '').localeCompare(b.batch || '');
-        } else if (sortBy === 'batch_desc') {
-          return (b.batch || '').localeCompare(a.batch || '');
-        } else if (sortBy === 'recent') {
-          return (b.createdAt || 0) - (a.createdAt || 0);
-        }
+        if (sortBy === 'ballot_asc') return (parseInt(a.ballotNo, 10) || 999) - (parseInt(b.ballotNo, 10) || 999);
+        if (sortBy === 'ballot_desc') return (parseInt(b.ballotNo, 10) || 0) - (parseInt(a.ballotNo, 10) || 0);
+        if (sortBy === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+        if (sortBy === 'batch_asc') return (a.batch || '').localeCompare(b.batch || '');
+        if (sortBy === 'batch_desc') return (b.batch || '').localeCompare(a.batch || '');
+        if (sortBy === 'recent') return (b.createdAt || 0) - (a.createdAt || 0);
         return 0;
       });
 
-      currentFilteredCandidates = filtered;
-      
-      // Update count & UI badge
       document.getElementById('filteredCount').textContent = filtered.length;
-      const hasActiveFilters = Boolean(search || post || dept || division);
+      const hasActive = Boolean(search || post || dept || division);
       const activeBadge = document.getElementById('activeFilterBadge');
-      if (hasActiveFilters) {
-        activeBadge.classList.remove('hidden');
-      } else {
-        activeBadge.classList.add('hidden');
+      if (hasActive) activeBadge.classList.remove('hidden');
+      else activeBadge.classList.add('hidden');
+
+      renderFilteredList(filtered);
+    }
+
+    function renderUI() {
+      updateCountsAndBadges();
+      handleSearchFilter();
+    }
+
+    function renderFilteredList(items) {
+      const gridContainer = document.getElementById('candidatesGridView');
+      const tableBody = document.getElementById('candidatesTableBody');
+      const emptyState = document.getElementById('emptyState');
+
+      if (items.length === 0) {
+        gridContainer.innerHTML = '';
+        tableBody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      // Grid HTML
+      gridContainer.innerHTML = items.map(cand => renderCandidateCard(cand)).join('');
+      // Table HTML
+      tableBody.innerHTML = items.map(cand => renderCandidateTableRow(cand)).join('');
+
+      lucide.createIcons();
+    }
+
+    // Render Single Candidate Card
+    function renderCandidateCard(cand) {
+      const safeId = escapeHtml(cand.id);
+      const img = cand.imageUrl || 'profile.png';
+      const isPending = cand.status === 'pending';
+      const hasDeletion = cand.deletionRequest != null;
+
+      // Status Tag Header
+      let statusBadge = '';
+      if (isPending) {
+        statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">🟡 Pending Approval</span>`;
+      } else if (hasDeletion) {
+        statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-300">🔴 Deletion Requested</span>`;
       }
 
-      renderFilteredResults(filtered);
+      // Actions bottom bar
+      let actionsHtml = '';
+      if (isAdminLoggedIn) {
+        if (isPending) {
+          actionsHtml = `
+            <div class="flex items-center gap-1.5 w-full">
+              <button onclick="approveCandidate('${safeId}')" class="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> Approve
+              </button>
+              <button onclick="openEditCandidateModal('${safeId}')" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs" title="Edit before approve">
+                <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="rejectCandidate('${safeId}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs" title="Reject">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          `;
+        } else if (hasDeletion) {
+          actionsHtml = `
+            <div class="flex items-center gap-1.5 w-full">
+              <button onclick="approveDeletion('${safeId}')" class="flex-1 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Confirm Deletion
+              </button>
+              <button onclick="dismissDeletionRequest('${safeId}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">
+                Dismiss Request
+              </button>
+            </div>
+          `;
+        } else {
+          actionsHtml = `
+            <button onclick="openCandidateDetails('${safeId}')" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 transition">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
+            </button>
+            <button onclick="openEditCandidateModal('${safeId}')" title="Edit Candidate" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center transition">
+              <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="directAdminDelete('${safeId}')" title="Direct Delete (Admin)" class="w-8 h-8 rounded-lg bg-white hover:bg-rose-50 text-rose-600 border border-slate-200 flex items-center justify-center transition">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          `;
+        }
+      } else {
+        // Public View actions
+        actionsHtml = `
+          <button onclick="openCandidateDetails('${safeId}')" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 transition">
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i> View Details
+          </button>
+          <button onclick="openRequestDeletionModal('${safeId}')" title="Report / Request Removal" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 text-xs font-medium flex items-center gap-1 transition">
+            <i data-lucide="flag" class="w-3.5 h-3.5"></i>
+            <span>Remove</span>
+          </button>
+        `;
+      }
+
+      return `
+        <div class="candidate-card-print bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group">
+          <div class="p-5 pb-3">
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl gold-gradient text-slate-950 font-black shadow-sm">
+                <span class="text-[10px] uppercase font-bold">Ballot</span>
+                <span class="text-base">#${escapeHtml(cand.ballotNo || '--')}</span>
+              </div>
+              <div class="text-right">
+                ${statusBadge}
+                <span class="block text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md mt-1">
+                  ${escapeHtml(cand.candidateFor || 'Candidate')}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3.5">
+              <img src="${escapeHtml(img)}" alt="${escapeHtml(cand.name)}" onerror="this.src='profile.png'" class="w-16 h-16 rounded-xl object-cover border-2 border-slate-100 shadow-md bg-slate-100">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-base font-bold text-slate-900 truncate group-hover:text-emerald-700 transition">
+                  ${escapeHtml(cand.name)}
+                </h3>
+                <div class="mt-1 flex flex-wrap items-center gap-1 text-xs text-slate-500">
+                  <span class="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                    IIUC ${escapeHtml(cand.department || 'Engr')}
+                  </span>
+                  <span>• ${escapeHtml(cand.batch || 'Alumni')}</span>
+                </div>
+                <div class="mt-1 font-mono text-[11px] text-slate-600">
+                  IEB ID: <strong class="text-slate-800">${escapeHtml(cand.membershipId || 'N/A')}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Deletion Reason Banner if flagged -->
+            ${hasDeletion ? `
+              <div class="mt-3 p-2 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-800">
+                <strong>Removal Reason:</strong> ${escapeHtml(cand.deletionRequest.reason)}
+                <div class="text-slate-500 truncate">${escapeHtml(cand.deletionRequest.details || '')}</div>
+              </div>
+            ` : ''}
+
+            <!-- Submitter info if pending -->
+            ${isPending && cand.submitter ? `
+              <div class="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900">
+                <strong>Submitted By:</strong> ${escapeHtml(cand.submitter.name || 'Public')} (${escapeHtml(cand.submitter.email || 'No email')})
+              </div>
+            ` : ''}
+
+            <p class="text-xs text-slate-600 line-clamp-2 mt-3 italic bg-slate-50 p-2 rounded-lg border border-slate-100">
+              ${escapeHtml(cand.professional || cand.manifesto || 'Experienced Engineer representing IIUC fraternity.')}
+            </p>
+          </div>
+
+          <div class="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-2 no-print">
+            ${actionsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render Single Table Row
+    function renderCandidateTableRow(cand) {
+      const safeId = escapeHtml(cand.id);
+      const img = cand.imageUrl || 'profile.png';
+      const isPending = cand.status === 'pending';
+      const hasDeletion = cand.deletionRequest != null;
+
+      let statusBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800">Live</span>';
+      if (isPending) statusBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800">Pending</span>';
+      if (hasDeletion) statusBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800">Deletion Req</span>';
+
+      return `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-4 py-3 text-center whitespace-nowrap">
+            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg gold-gradient font-black text-slate-900 text-xs shadow-sm">
+              ${escapeHtml(cand.ballotNo || '-')}
+            </span>
+          </td>
+          <td class="px-4 py-3 whitespace-nowrap">
+            <div class="flex items-center gap-2.5">
+              <img src="${escapeHtml(img)}" onerror="this.src='profile.png'" class="w-8 h-8 rounded-lg object-cover bg-slate-100 border">
+              <div>
+                <span class="font-bold text-slate-800 hover:text-emerald-700 cursor-pointer" onclick="openCandidateDetails('${safeId}')">
+                  ${escapeHtml(cand.name)}
+                </span>
+                <span class="block text-[11px] text-slate-400">${escapeHtml(cand.division || '')}</span>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-xs font-semibold text-emerald-800">
+            ${escapeHtml(cand.candidateFor || '')}
+          </td>
+          <td class="px-4 py-3 text-xs">
+            <strong>${escapeHtml(cand.department || '')}</strong> • ${escapeHtml(cand.batch || '')}
+          </td>
+          <td class="px-4 py-3 font-mono text-xs font-bold text-slate-700">
+            ${escapeHtml(cand.membershipId || 'N/A')}
+          </td>
+          <td class="px-4 py-3">${statusBadge}</td>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            <div class="flex items-center justify-end gap-1">
+              <button onclick="openCandidateDetails('${safeId}')" class="p-1 rounded text-slate-600 hover:text-emerald-600" title="View">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+              ${isAdminLoggedIn ? `
+                <button onclick="openEditCandidateModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-blue-600" title="Edit">
+                  <i data-lucide="edit" class="w-4 h-4"></i>
+                </button>
+                <button onclick="directAdminDelete('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Delete">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              ` : `
+                <button onclick="openRequestDeletionModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Request Removal">
+                  <i data-lucide="flag" class="w-4 h-4"></i>
+                </button>
+              `}
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    // =========================================================================
+    // CANDIDATE SUBMISSION (ADD / EDIT)
+    // =========================================================================
+    function openCandidateFormModal() {
+      document.getElementById('candidateForm').reset();
+      document.getElementById('candidateId').value = '';
+      document.getElementById('formImagePreview').src = 'profile.png';
+      
+      const modal = document.getElementById('candidateFormModal');
+      const modalTitle = document.getElementById('formModalTitle');
+      const submitBtn = document.getElementById('formSubmitBtnText');
+
+      if (isAdminLoggedIn) {
+        modalTitle.textContent = "Add & Publish Candidate (Admin)";
+        submitBtn.textContent = "Publish Candidate Directly";
+      } else {
+        modalTitle.textContent = "Submit Candidate Entry";
+        submitBtn.textContent = "Submit for Admin Approval";
+      }
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function openEditCandidateModal(id) {
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      document.getElementById('candidateId').value = cand.id;
+      document.getElementById('formName').value = cand.name.replace(/^Engr\.\s*/i, '');
+      document.getElementById('formBallotNo').value = cand.ballotNo || '';
+      document.getElementById('formCandidateFor').value = cand.candidateFor || '';
+      document.getElementById('formBatch').value = cand.batch || '';
+      document.getElementById('formDepartment').value = cand.department || '';
+      document.getElementById('formMembershipId').value = cand.membershipId || '';
+      document.getElementById('formDivision').value = cand.division || '';
+      
+      document.getElementById('formEducation').value = cand.education || '';
+      document.getElementById('formProfessional').value = cand.professional || '';
+      document.getElementById('formExtraCurricular').value = cand.extraCurricular || '';
+      document.getElementById('formManifesto').value = cand.manifesto || '';
+      
+      document.getElementById('formPhone').value = cand.phone || '';
+      document.getElementById('formEmail').value = cand.email || '';
+      document.getElementById('formSocial').value = cand.social || '';
+      
+      const img = cand.imageUrl || 'profile.png';
+      document.getElementById('formImagePreview').src = img;
+      document.getElementById('formImageUrl').value = cand.imageUrl && !cand.imageUrl.startsWith('data:') ? cand.imageUrl : '';
+
+      const modalTitle = document.getElementById('formModalTitle');
+      const submitBtn = document.getElementById('formSubmitBtnText');
+      modalTitle.textContent = isAdminLoggedIn ? "Edit Candidate Details (Admin)" : "Suggest Candidate Update";
+      submitBtn.textContent = isAdminLoggedIn ? "Update & Save Changes" : "Submit Edit for Approval";
+
+      document.getElementById('candidateFormModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCandidateFormModal() {
+      document.getElementById('candidateFormModal').classList.add('hidden');
+    }
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('formImagePreview').src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleImageUrlChange(url) {
+      if (url && url.trim().length > 0) {
+        document.getElementById('formImagePreview').src = url.trim();
+      }
+    }
+
+    function handleSaveCandidate(event) {
+      event.preventDefault();
+
+      const id = document.getElementById('candidateId').value;
+      const rawName = document.getElementById('formName').value.trim();
+      const formattedName = rawName.toLowerCase().startsWith('engr.') ? rawName : `Engr. ${rawName}`;
+
+      const candData = {
+        name: formattedName,
+        ballotNo: document.getElementById('formBallotNo').value.trim(),
+        candidateFor: document.getElementById('formCandidateFor').value.trim(),
+        batch: document.getElementById('formBatch').value.trim(),
+        department: document.getElementById('formDepartment').value,
+        membershipId: document.getElementById('formMembershipId').value.trim(),
+        division: document.getElementById('formDivision').value.trim(),
+        education: document.getElementById('formEducation').value.trim(),
+        professional: document.getElementById('formProfessional').value.trim(),
+        extraCurricular: document.getElementById('formExtraCurricular').value.trim(),
+        manifesto: document.getElementById('formManifesto').value.trim(),
+        phone: document.getElementById('formPhone').value.trim(),
+        email: document.getElementById('formEmail').value.trim(),
+        social: document.getElementById('formSocial').value.trim(),
+        imageUrl: document.getElementById('formImagePreview').src,
+        updatedAt: Date.now()
+      };
+
+      if (isAdminLoggedIn) {
+        // Direct publishing by Admin
+        candData.status = 'approved';
+        if (id) {
+          const index = candidates.findIndex(c => c.id === id);
+          if (index !== -1) candidates[index] = { ...candidates[index], ...candData };
+          showToast(`Candidate "${candData.name}" updated successfully!`, 'success');
+        } else {
+          candData.id = 'cand_' + Date.now();
+          candData.createdAt = Date.now();
+          candData.deletionRequest = null;
+          candidates.unshift(candData);
+          showToast(`Candidate "${candData.name}" published directly!`, 'success');
+        }
+      } else {
+        // Public Submission Workflow: Requires Admin Approval
+        candData.status = 'pending';
+        candData.submitter = {
+          name: document.getElementById('formSubmitterName').value.trim() || 'Public Submitter',
+          email: document.getElementById('formSubmitterEmail').value.trim() || 'Anonymous'
+        };
+
+        if (id) {
+          // Edit suggestion
+          const index = candidates.findIndex(c => c.id === id);
+          if (index !== -1) {
+            candidates[index] = { ...candidates[index], ...candData, status: 'pending' };
+            showToast(`Update submitted! Awaiting approval by ${ADMIN_EMAIL}`, 'info');
+          }
+        } else {
+          // New submission
+          candData.id = 'cand_' + Date.now();
+          candData.createdAt = Date.now();
+          candData.deletionRequest = null;
+          candidates.unshift(candData);
+          showToast(`Submission received! Awaiting review and approval by ${ADMIN_EMAIL}`, 'success');
+        }
+      }
+
+      saveCandidatesToStorage();
+      closeCandidateFormModal();
+      renderUI();
+    }
+
+    // =========================================================================
+    // ADMIN APPROVAL & REJECTION ACTIONS
+    // =========================================================================
+    function approveCandidate(id) {
+      if (!isAdminLoggedIn) return;
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      cand.status = 'approved';
+      cand.approvedAt = Date.now();
+      saveCandidatesToStorage();
+      renderUI();
+      showToast(`Approved & Published: ${cand.name}!`, 'success');
+    }
+
+    function rejectCandidate(id) {
+      if (!isAdminLoggedIn) return;
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      if (confirm(`Reject candidate submission "${cand.name}"?`)) {
+        candidates = candidates.filter(c => c.id !== id);
+        saveCandidatesToStorage();
+        renderUI();
+        showToast(`Submission for "${cand.name}" rejected.`, 'info');
+      }
+    }
+
+    // Direct Admin Delete
+    function directAdminDelete(id) {
+      if (!isAdminLoggedIn) return;
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      if (confirm(`Admin confirmation: Permanently delete candidate "${cand.name}"?`)) {
+        candidates = candidates.filter(c => c.id !== id);
+        saveCandidatesToStorage();
+        renderUI();
+        showToast(`Candidate removed permanently.`, 'info');
+      }
+    }
+
+    // =========================================================================
+    // PUBLIC DELETION REQUEST & ADMIN DELETION APPROVAL
+    // =========================================================================
+    function openRequestDeletionModal(id) {
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      document.getElementById('deletionCandidateId').value = cand.id;
+      document.getElementById('deletionCandidateName').textContent = cand.name;
+      document.getElementById('deletionCandidateBallot').textContent = cand.ballotNo || '--';
+      document.getElementById('requestDeletionModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRequestDeletionModal() {
+      document.getElementById('requestDeletionModal').classList.add('hidden');
+    }
+
+    function handleRequestDeletionSubmit(event) {
+      event.preventDefault();
+      const id = document.getElementById('deletionCandidateId').value;
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      cand.deletionRequest = {
+        reason: document.getElementById('deletionReasonType').value,
+        details: document.getElementById('deletionDetails').value.trim(),
+        contact: document.getElementById('deletionRequesterContact').value.trim(),
+        timestamp: Date.now()
+      };
+
+      saveCandidatesToStorage();
+      closeRequestDeletionModal();
+      renderUI();
+      showToast(`Removal request submitted! Forwarded to admin (${ADMIN_EMAIL}) for approval.`, 'info');
+    }
+
+    function approveDeletion(id) {
+      if (!isAdminLoggedIn) return;
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      if (confirm(`Approve deletion of "${cand.name}" based on requested reason?`)) {
+        candidates = candidates.filter(c => c.id !== id);
+        saveCandidatesToStorage();
+        renderUI();
+        showToast(`Candidate "${cand.name}" removed per deletion approval.`, 'success');
+      }
+    }
+
+    function dismissDeletionRequest(id) {
+      if (!isAdminLoggedIn) return;
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      cand.deletionRequest = null;
+      saveCandidatesToStorage();
+      renderUI();
+      showToast(`Deletion request dismissed. Candidate remains active.`, 'info');
+    }
+
+    // =========================================================================
+    // DETAILS MODAL
+    // =========================================================================
+    function openCandidateDetails(id) {
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      document.getElementById('detailImage').src = cand.imageUrl || 'profile.png';
+      document.getElementById('detailBallotNo').textContent = cand.ballotNo || '--';
+      document.getElementById('detailCandidateForBadge').textContent = cand.candidateFor || 'IEB Candidate';
+      document.getElementById('detailDivisionBadge').textContent = cand.division || 'All Divisions';
+      document.getElementById('detailName').textContent = cand.name;
+      document.getElementById('detailDept').textContent = cand.department || 'Engineering';
+      document.getElementById('detailBatch').textContent = cand.batch || 'Alumni';
+      document.getElementById('detailMembershipId').textContent = cand.membershipId || 'N/A';
+
+      // Status Badge
+      const statusBadge = document.getElementById('detailStatusBadge');
+      if (cand.status === 'pending') {
+        statusBadge.className = 'px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-400 text-slate-950';
+        statusBadge.textContent = 'Pending Approval';
+        statusBadge.classList.remove('hidden');
+      } else {
+        statusBadge.classList.add('hidden');
+      }
+
+      // Manifesto
+      const manifestoEl = document.getElementById('detailManifesto');
+      if (cand.manifesto) {
+        manifestoEl.textContent = `“${cand.manifesto}”`;
+        manifestoEl.classList.remove('hidden');
+      } else {
+        manifestoEl.classList.add('hidden');
+      }
+
+      // Qualifications
+      document.getElementById('detailEducation').textContent = cand.education || 'No educational details listed.';
+      document.getElementById('detailProfessional').textContent = cand.professional || 'No professional experience listed.';
+      document.getElementById('detailExtraCurricular').textContent = cand.extraCurricular || 'No extracurricular leadership records listed.';
+
+      // Contact
+      document.getElementById('detailPhone').innerHTML = `
+        <i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-600"></i> ${escapeHtml(cand.phone || 'Phone not listed')}
+      `;
+      document.getElementById('detailEmail').innerHTML = `
+        <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600"></i> ${escapeHtml(cand.email || 'Email not listed')}
+      `;
+
+      // Social
+      const socialLink = document.getElementById('detailSocialLink');
+      const socialWrapper = document.getElementById('detailSocialWrapper');
+      if (cand.social) {
+        let href = cand.social;
+        if (!href.startsWith('http://') && !href.startsWith('https://')) href = 'https://' + href;
+        socialLink.href = href;
+        socialWrapper.classList.remove('hidden');
+      } else {
+        socialWrapper.classList.add('hidden');
+      }
+
+      // Submitter note
+      const submitterNote = document.getElementById('detailSubmitterNote');
+      if (cand.submitter) {
+        submitterNote.textContent = `Submitted by: ${cand.submitter.name} (${cand.submitter.email})`;
+      } else {
+        submitterNote.textContent = 'IIUC Engineering Fraternity Candidate';
+      }
+
+      // Action Buttons
+      const actionsContainer = document.getElementById('detailActionBtnsContainer');
+      const safeId = escapeHtml(cand.id);
+
+      if (isAdminLoggedIn) {
+        actionsContainer.innerHTML = `
+          ${cand.status === 'pending' ? `
+            <button onclick="approveCandidate('${safeId}'); closeDetailsModal();" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i> Approve
+            </button>
+          ` : ''}
+          <button onclick="closeDetailsModal(); openEditCandidateModal('${safeId}');" class="px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-bold flex items-center gap-1">
+            <i data-lucide="edit" class="w-3.5 h-3.5"></i> Edit
+          </button>
+          <button onclick="closeDetailsModal(); directAdminDelete('${safeId}');" class="px-3.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 text-xs font-bold flex items-center gap-1">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+          </button>
+          <button onclick="closeDetailsModal()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-bold">Close</button>
+        `;
+      } else {
+        actionsContainer.innerHTML = `
+          <button onclick="closeDetailsModal(); openRequestDeletionModal('${safeId}');" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-medium flex items-center gap-1">
+            <i data-lucide="flag" class="w-3.5 h-3.5"></i> Request Removal
+          </button>
+          <button onclick="closeDetailsModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-bold">Close</button>
+        `;
+      }
+
+      document.getElementById('candidateDetailsModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeDetailsModal() {
+      document.getElementById('candidateDetailsModal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // CLOUD REALTIME SYNC (FIREBASE OPTIONAL INTEGRATION)
+    // =========================================================================
+    function openCloudConfigModal() {
+      const stored = localStorage.getItem(STORAGE_KEY_FIREBASE);
+      if (stored) document.getElementById('firebaseConfigInput').value = stored;
+      document.getElementById('cloudConfigModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCloudConfigModal() {
+      document.getElementById('cloudConfigModal').classList.add('hidden');
+    }
+
+    function saveCloudConfig() {
+      const raw = document.getElementById('firebaseConfigInput').value.trim();
+      try {
+        const parsed = JSON.parse(raw);
+        localStorage.setItem(STORAGE_KEY_FIREBASE, JSON.stringify(parsed));
+        closeCloudConfigModal();
+        initFirebaseIfConfigured();
+        showToast('Firebase cloud connected! Realtime sync active.', 'success');
+      } catch (e) {
+        showToast('Invalid JSON format for Firebase config.', 'error');
+      }
+    }
+
+    function clearCloudConfig() {
+      localStorage.removeItem(STORAGE_KEY_FIREBASE);
+      db = null;
+      document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-slate-400';
+      document.getElementById('cloudStatusText').textContent = 'Local Mode';
+      closeCloudConfigModal();
+      showToast('Cloud disconnected. Using local database.', 'info');
+    }
+
+    function initFirebaseIfConfigured() {
+      const raw = localStorage.getItem(STORAGE_KEY_FIREBASE);
+      if (!raw) {
+        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400';
+        document.getElementById('cloudStatusText').textContent = 'Local Sync Ready';
+        return;
+      }
+
+      try {
+        const config = JSON.parse(raw);
+        if (!firebase.apps.length) {
+          firebase.initializeApp(config);
+        }
+        db = firebase.firestore();
+        document.getElementById('cloudStatusDot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        document.getElementById('cloudStatusText').textContent = 'Cloud Live';
+
+        // Listen for realtime changes
+        db.collection('candidates').onSnapshot((snapshot) => {
+          if (!snapshot.empty) {
+            const cloudCandidates = [];
+            snapshot.forEach(doc => cloudCandidates.push({ id: doc.id, ...doc.data() }));
+            candidates = cloudCandidates;
+            localStorage.setItem(STORAGE_KEY_CANDIDATES, JSON.stringify(candidates));
+            renderUI();
+          }
+        });
+      } catch (err) {
+        console.error('Firebase init error', err);
+      }
+    }
+
+    function syncToCloud() {
+      if (!db) return;
+      candidates.forEach(cand => {
+        const { id, ...data } = cand;
+        db.collection('candidates').doc(id).set(data, { merge: true }).catch(err => console.error(err));
+      });
+    }
+
+    // =========================================================================
+    // EXPORT / DEMO RESTORE UTILITIES
+    // =========================================================================
+    function exportToCSV() {
+      const liveOnly = candidates.filter(c => c.status === 'approved');
+      if (liveOnly.length === 0) {
+        showToast('No approved candidates to export', 'error');
+        return;
+      }
+
+      const headers = ['Ballot No', 'Name', 'Candidate For', 'Department', 'IIUC Batch', 'IEB ID', 'Division', 'Phone', 'Email', 'Education', 'Experience'];
+      const rows = liveOnly.map(c => [
+        `"${(c.ballotNo || '').replace(/"/g, '""')}"`,
+        `"${(c.name || '').replace(/"/g, '""')}"`,
+        `"${(c.candidateFor || '').replace(/"/g, '""')}"`,
+        `"${(c.department || '').replace(/"/g, '""')}"`,
+        `"${(c.batch || '').replace(/"/g, '""')}"`,
+        `"${(c.membershipId || '').replace(/"/g, '""')}"`,
+        `"${(c.division || '').replace(/"/g, '""')}"`,
+        `"${(c.phone || '').replace(/"/g, '""')}"`,
+        `"${(c.email || '').replace(/"/g, '""')}"`,
+        `"${(c.education || '').replace(/"/g, '""')}"`,
+        `"${(c.professional || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const link = document.createElement('a');
+      link.href = encodeURI(csvContent);
+      link.download = `IEB_Election_IIUC_Candidates_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showToast('Exported candidate list to CSV!', 'success');
+    }
+
+    function exportToJSON() {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(candidates, null, 2));
+      const link = document.createElement('a');
+      link.href = dataStr;
+      link.download = `IEB_IIUC_Candidates_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showToast('Exported backup to JSON!', 'success');
+    }
+
+    function loadSampleDataConfirm() {
+      if (confirm('Restore sample IIUC candidates and approval demo entries?')) {
+        candidates = [...SAMPLE_CANDIDATES];
+        saveCandidatesToStorage();
+        renderUI();
+        showToast('Sample candidate directory restored!', 'success');
+      }
     }
 
     function clearSearch() {
@@ -1182,484 +2191,6 @@
       }
     }
 
-    // Render Master Method
-    function renderCandidates() {
-      updateStats();
-      handleSearchFilter();
-    }
-
-    function renderFilteredResults(items) {
-      const gridContainer = document.getElementById('candidatesGridView');
-      const tableBody = document.getElementById('candidatesTableBody');
-      const emptyState = document.getElementById('emptyState');
-
-      if (items.length === 0) {
-        gridContainer.innerHTML = '';
-        tableBody.innerHTML = '';
-        emptyState.classList.remove('hidden');
-        return;
-      }
-
-      emptyState.classList.add('hidden');
-
-      // 1. Render Cards (Grid)
-      gridContainer.innerHTML = items.map(cand => createCandidateCardHtml(cand)).join('');
-
-      // 2. Render Table Rows
-      tableBody.innerHTML = items.map(cand => createCandidateTableRowHtml(cand)).join('');
-
-      // Refresh icons
-      lucide.createIcons();
-    }
-
-    // HTML Generator for Candidate Card
-    function createCandidateCardHtml(cand) {
-      const img = cand.imageUrl || 'profile.png';
-      const safeId = escapeHtml(cand.id);
-
-      return `
-        <div class="candidate-card-print bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-          
-          <!-- Card Top Bar: Ballot & Position -->
-          <div class="p-5 pb-3">
-            <div class="flex items-start justify-between gap-3 mb-4">
-              
-              <!-- Ballot Badge -->
-              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl gold-gradient text-slate-950 font-black shadow-sm">
-                <span class="text-xs uppercase tracking-wider font-bold">Ballot</span>
-                <span class="text-lg">#${escapeHtml(cand.ballotNo || '--')}</span>
-              </div>
-
-              <!-- Candidate For Tag -->
-              <span class="text-right text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-lg">
-                ${escapeHtml(cand.candidateFor || 'Candidate')}
-              </span>
-            </div>
-
-            <!-- Profile Info Row -->
-            <div class="flex items-center gap-4">
-              <!-- Avatar -->
-              <div class="relative shrink-0">
-                <img 
-                  src="${escapeHtml(img)}" 
-                  alt="${escapeHtml(cand.name)}" 
-                  onerror="this.src='profile.png'" 
-                  class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-slate-100 shadow-md group-hover:scale-105 transition duration-300 bg-slate-100"
-                >
-                <div class="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1 rounded-full border-2 border-white shadow-sm" title="IIUC Verified">
-                  <i data-lucide="check" class="w-3 h-3"></i>
-                </div>
-              </div>
-
-              <!-- Name & Academic / IEB Details -->
-              <div class="flex-1 min-w-0">
-                <h3 class="text-base sm:text-lg font-bold text-slate-900 truncate group-hover:text-emerald-700 transition">
-                  ${escapeHtml(cand.name)}
-                </h3>
-                
-                <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-                  <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                    IIUC ${escapeHtml(cand.department || 'Engr')}
-                  </span>
-                  <span class="text-slate-400">•</span>
-                  <span>${escapeHtml(cand.batch || 'Alumni')}</span>
-                </div>
-
-                <div class="mt-1 flex items-center gap-1.5 text-xs text-slate-600 font-mono">
-                  <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
-                  <span class="font-semibold text-slate-700">IEB ID: ${escapeHtml(cand.membershipId || 'N/A')}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Center / Division -->
-            <div class="mt-3.5 flex items-center gap-1.5 text-xs text-slate-500 pt-2.5 border-t border-slate-100">
-              <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-              <span class="font-medium text-slate-700">${escapeHtml(cand.division || 'All Divisions')}</span>
-            </div>
-
-            <!-- Professional Role Preview -->
-            <p class="text-xs text-slate-600 line-clamp-2 mt-2 italic bg-slate-50 p-2 rounded-lg border border-slate-100">
-              ${escapeHtml(cand.professional || cand.manifesto || 'Experienced Engineer representing IIUC fraternity.')}
-            </p>
-
-          </div>
-
-          <!-- Card Bottom Action Bar -->
-          <div class="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-2 no-print">
-            <button 
-              onclick="openCandidateDetails('${safeId}')" 
-              class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 transition shadow-sm"
-            >
-              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-              <span>View Profile</span>
-            </button>
-
-            <button 
-              onclick="openEditCandidateModal('${safeId}')" 
-              title="Edit Candidate" 
-              class="w-9 h-9 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center transition shadow-sm"
-            >
-              <i data-lucide="edit" class="w-3.5 h-3.5 text-slate-600"></i>
-            </button>
-
-            <button 
-              onclick="deleteCandidateConfirm('${safeId}')" 
-              title="Delete Candidate" 
-              class="w-9 h-9 rounded-lg bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 hover:border-rose-200 flex items-center justify-center transition shadow-sm"
-            >
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-
-        </div>
-      `;
-    }
-
-    // HTML Generator for Table Row
-    function createCandidateTableRowHtml(cand) {
-      const img = cand.imageUrl || 'profile.png';
-      const safeId = escapeHtml(cand.id);
-
-      return `
-        <tr class="hover:bg-slate-50 transition">
-          <!-- Ballot -->
-          <td class="px-4 py-3 text-center whitespace-nowrap">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg gold-gradient font-black text-slate-900 text-sm shadow-sm">
-              ${escapeHtml(cand.ballotNo || '-')}
-            </span>
-          </td>
-
-          <!-- Candidate -->
-          <td class="px-4 py-3 whitespace-nowrap">
-            <div class="flex items-center gap-3">
-              <img src="${escapeHtml(img)}" alt="${escapeHtml(cand.name)}" onerror="this.src='profile.png'" class="w-10 h-10 rounded-lg object-cover bg-slate-100 border border-slate-200">
-              <div>
-                <p class="font-bold text-slate-800 hover:text-emerald-700 cursor-pointer" onclick="openCandidateDetails('${safeId}')">
-                  ${escapeHtml(cand.name)}
-                </p>
-                <p class="text-xs text-slate-400">${escapeHtml(cand.email || cand.phone || '')}</p>
-              </div>
-            </div>
-          </td>
-
-          <!-- Candidate For -->
-          <td class="px-4 py-3">
-            <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60 inline-block">
-              ${escapeHtml(cand.candidateFor || 'N/A')}
-            </span>
-          </td>
-
-          <!-- Dept & Batch -->
-          <td class="px-4 py-3 text-xs">
-            <span class="font-bold text-slate-700">${escapeHtml(cand.department || '')}</span>
-            <div class="text-slate-400 text-[11px]">${escapeHtml(cand.batch || '')}</div>
-          </td>
-
-          <!-- IEB Member ID -->
-          <td class="px-4 py-3 font-mono text-xs font-bold text-slate-700">
-            ${escapeHtml(cand.membershipId || 'N/A')}
-          </td>
-
-          <!-- Division -->
-          <td class="px-4 py-3 text-xs text-slate-600">
-            ${escapeHtml(cand.division || '')}
-          </td>
-
-          <!-- Actions -->
-          <td class="px-4 py-3 text-right whitespace-nowrap">
-            <div class="flex items-center justify-end gap-1.5">
-              <button onclick="openCandidateDetails('${safeId}')" class="p-1.5 rounded-md hover:bg-slate-100 text-slate-600 hover:text-emerald-600 transition" title="View Profile">
-                <i data-lucide="eye" class="w-4 h-4"></i>
-              </button>
-              <button onclick="openEditCandidateModal('${safeId}')" class="p-1.5 rounded-md hover:bg-slate-100 text-slate-600 hover:text-blue-600 transition" title="Edit">
-                <i data-lucide="edit" class="w-4 h-4"></i>
-              </button>
-              <button onclick="deleteCandidateConfirm('${safeId}')" class="p-1.5 rounded-md hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition" title="Delete">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }
-
-    // =========================================================================
-    // MODAL HANDLERS: ADD & EDIT (MANUAL ENTRY)
-    // =========================================================================
-    function openAddCandidateModal() {
-      document.getElementById('candidateForm').reset();
-      document.getElementById('candidateId').value = '';
-      document.getElementById('formModalTitle').textContent = 'Add New Candidate';
-      document.getElementById('formSubmitBtnText').textContent = 'Save Candidate';
-      document.getElementById('formImagePreview').src = 'profile.png';
-      
-      const modal = document.getElementById('candidateFormModal');
-      modal.classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function openEditCandidateModal(id) {
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
-
-      document.getElementById('candidateId').value = cand.id;
-      document.getElementById('formModalTitle').textContent = 'Edit Candidate Details';
-      document.getElementById('formSubmitBtnText').textContent = 'Update Candidate';
-      
-      document.getElementById('formName').value = cand.name.replace(/^Engr\.\s*/i, '');
-      document.getElementById('formBallotNo').value = cand.ballotNo || '';
-      document.getElementById('formCandidateFor').value = cand.candidateFor || '';
-      document.getElementById('formBatch').value = cand.batch || '';
-      document.getElementById('formDepartment').value = cand.department || '';
-      document.getElementById('formMembershipId').value = cand.membershipId || '';
-      document.getElementById('formDivision').value = cand.division || '';
-      
-      document.getElementById('formEducation').value = cand.education || '';
-      document.getElementById('formProfessional').value = cand.professional || '';
-      document.getElementById('formExtraCurricular').value = cand.extraCurricular || '';
-      document.getElementById('formManifesto').value = cand.manifesto || '';
-      
-      document.getElementById('formPhone').value = cand.phone || '';
-      document.getElementById('formEmail').value = cand.email || '';
-      document.getElementById('formSocial').value = cand.social || '';
-      
-      const img = cand.imageUrl || 'profile.png';
-      document.getElementById('formImagePreview').src = img;
-      document.getElementById('formImageUrl').value = cand.imageUrl && !cand.imageUrl.startsWith('data:') ? cand.imageUrl : '';
-
-      const modal = document.getElementById('candidateFormModal');
-      modal.classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function closeCandidateFormModal() {
-      document.getElementById('candidateFormModal').classList.add('hidden');
-    }
-
-    // Photo input handling (converts uploaded file to Base64)
-    function handleImageUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        document.getElementById('formImagePreview').src = evt.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function handleImageUrlChange(url) {
-      if (url && url.trim().length > 0) {
-        document.getElementById('formImagePreview').src = url.trim();
-      }
-    }
-
-    // Save or Update candidate
-    function handleSaveCandidate(event) {
-      event.preventDefault();
-
-      const id = document.getElementById('candidateId').value;
-      const rawName = document.getElementById('formName').value.trim();
-      const formattedName = rawName.toLowerCase().startsWith('engr.') ? rawName : `Engr. ${rawName}`;
-
-      const candData = {
-        name: formattedName,
-        ballotNo: document.getElementById('formBallotNo').value.trim(),
-        candidateFor: document.getElementById('formCandidateFor').value.trim(),
-        batch: document.getElementById('formBatch').value.trim(),
-        department: document.getElementById('formDepartment').value,
-        membershipId: document.getElementById('formMembershipId').value.trim(),
-        division: document.getElementById('formDivision').value.trim(),
-        education: document.getElementById('formEducation').value.trim(),
-        professional: document.getElementById('formProfessional').value.trim(),
-        extraCurricular: document.getElementById('formExtraCurricular').value.trim(),
-        manifesto: document.getElementById('formManifesto').value.trim(),
-        phone: document.getElementById('formPhone').value.trim(),
-        email: document.getElementById('formEmail').value.trim(),
-        social: document.getElementById('formSocial').value.trim(),
-        imageUrl: document.getElementById('formImagePreview').src,
-        updatedAt: Date.now()
-      };
-
-      if (id) {
-        // Edit existing
-        const index = candidates.findIndex(c => c.id === id);
-        if (index !== -1) {
-          candidates[index] = { ...candidates[index], ...candData };
-          showToast(`Candidate "${candData.name}" updated successfully!`, 'success');
-        }
-      } else {
-        // Add new
-        candData.id = 'cand_' + Date.now();
-        candData.createdAt = Date.now();
-        candidates.unshift(candData);
-        showToast(`Candidate "${candData.name}" added successfully!`, 'success');
-      }
-
-      saveCandidatesToStorage();
-      closeCandidateFormModal();
-      renderCandidates();
-    }
-
-    // =========================================================================
-    // MODAL HANDLERS: CANDIDATE FULL DETAILS VIEW
-    // =========================================================================
-    function openCandidateDetails(id) {
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
-
-      document.getElementById('detailId').textContent = cand.id;
-      document.getElementById('detailImage').src = cand.imageUrl || 'profile.png';
-      document.getElementById('detailBallotNo').textContent = cand.ballotNo || '--';
-      document.getElementById('detailCandidateForBadge').textContent = cand.candidateFor || 'IEB Candidate';
-      document.getElementById('detailDivisionBadge').textContent = cand.division || 'All Divisions';
-      document.getElementById('detailName').textContent = cand.name;
-      document.getElementById('detailDept').textContent = cand.department || 'Engineering';
-      document.getElementById('detailBatch').textContent = cand.batch || 'Alumni';
-      document.getElementById('detailMembershipId').textContent = cand.membershipId || 'N/A';
-      
-      // Manifesto
-      const manifestoEl = document.getElementById('detailManifesto');
-      if (cand.manifesto) {
-        manifestoEl.textContent = `“${cand.manifesto}”`;
-        manifestoEl.classList.remove('hidden');
-      } else {
-        manifestoEl.classList.add('hidden');
-      }
-
-      // Educational
-      document.getElementById('detailEducation').textContent = cand.education || 'No educational details provided.';
-
-      // Professional
-      document.getElementById('detailProfessional').textContent = cand.professional || 'No professional experience provided.';
-
-      // Extra-Curricular
-      document.getElementById('detailExtraCurricular').textContent = cand.extraCurricular || 'No extracurricular leadership records provided.';
-
-      // Contact info
-      document.getElementById('detailPhone').innerHTML = `
-        <i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-600"></i> ${escapeHtml(cand.phone || 'Phone not listed')}
-      `;
-      document.getElementById('detailEmail').innerHTML = `
-        <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600"></i> ${escapeHtml(cand.email || 'Email not listed')}
-      `;
-
-      // Social link
-      const socialLink = document.getElementById('detailSocialLink');
-      const socialWrapper = document.getElementById('detailSocialWrapper');
-      if (cand.social) {
-        let href = cand.social;
-        if (!href.startsWith('http://') && !href.startsWith('https://')) {
-          href = 'https://' + href;
-        }
-        socialLink.href = href;
-        socialWrapper.classList.remove('hidden');
-      } else {
-        socialWrapper.classList.add('hidden');
-      }
-
-      // Edit Button hookup in Detail view
-      const editBtn = document.getElementById('detailEditBtn');
-      editBtn.onclick = () => {
-        closeDetailsModal();
-        openEditCandidateModal(cand.id);
-      };
-
-      document.getElementById('candidateDetailsModal').classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function closeDetailsModal() {
-      document.getElementById('candidateDetailsModal').classList.add('hidden');
-    }
-
-    // Delete candidate confirmation
-    function deleteCandidateConfirm(id) {
-      const cand = candidates.find(c => c.id === id);
-      if (!cand) return;
-
-      if (confirm(`Are you sure you want to remove ${cand.name} (Ballot #${cand.ballotNo}) from the IIUC candidate list?`)) {
-        candidates = candidates.filter(c => c.id !== id);
-        saveCandidatesToStorage();
-        renderCandidates();
-        showToast(`Candidate removed`, 'info');
-      }
-    }
-
-    // Restore Default Sample Data Confirmation
-    function loadSampleDataConfirm() {
-      if (confirm('Do you want to restore the official IIUC demo candidate list? This will add back the sample candidate directory.')) {
-        candidates = [...INITIAL_SAMPLE_CANDIDATES];
-        saveCandidatesToStorage();
-        renderCandidates();
-        showToast('Sample candidates restored!', 'success');
-      }
-    }
-
-    // =========================================================================
-    // EXPORT & IMPORT UTILITIES
-    // =========================================================================
-    function exportToCSV() {
-      if (candidates.length === 0) {
-        showToast('No candidates to export', 'error');
-        return;
-      }
-
-      const headers = [
-        'Ballot No', 'Name', 'Candidate For', 'Department', 'IIUC Batch',
-        'IEB Membership ID', 'Division / Center', 'Phone', 'Email',
-        'Educational Qualification', 'Professional Qualification', 'Extra Curricular', 'Manifesto'
-      ];
-
-      const rows = candidates.map(c => [
-        `"${(c.ballotNo || '').replace(/"/g, '""')}"`,
-        `"${(c.name || '').replace(/"/g, '""')}"`,
-        `"${(c.candidateFor || '').replace(/"/g, '""')}"`,
-        `"${(c.department || '').replace(/"/g, '""')}"`,
-        `"${(c.batch || '').replace(/"/g, '""')}"`,
-        `"${(c.membershipId || '').replace(/"/g, '""')}"`,
-        `"${(c.division || '').replace(/"/g, '""')}"`,
-        `"${(c.phone || '').replace(/"/g, '""')}"`,
-        `"${(c.email || '').replace(/"/g, '""')}"`,
-        `"${(c.education || '').replace(/"/g, '""')}"`,
-        `"${(c.professional || '').replace(/"/g, '""')}"`,
-        `"${(c.extraCurricular || '').replace(/"/g, '""')}"`,
-        `"${(c.manifesto || '').replace(/"/g, '""')}"`
-      ]);
-
-      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', `IEB_Election_IIUC_Candidates_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      showToast('Exported to CSV successfully!', 'success');
-    }
-
-    function exportToJSON() {
-      if (candidates.length === 0) {
-        showToast('No candidates to export', 'error');
-        return;
-      }
-
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(candidates, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', `IEB_IIUC_Candidates_Backup_${new Date().toISOString().slice(0, 10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-
-      showToast('Exported candidate data to JSON!', 'success');
-    }
-
-    // =========================================================================
-    // TOAST NOTIFICATION UTILITY
-    // =========================================================================
     function showToast(message, type = 'success') {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
@@ -1679,27 +2210,18 @@
       }
 
       toast.className = `${bg} pointer-events-auto border px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold transform transition-all duration-300 translate-y-3 opacity-0`;
-      toast.innerHTML = `
-        <i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i>
-        <span>${escapeHtml(message)}</span>
-      `;
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i><span>${escapeHtml(message)}</span>`;
 
       container.appendChild(toast);
       lucide.createIcons();
 
-      // Trigger entrance transition
-      setTimeout(() => {
-        toast.classList.remove('translate-y-3', 'opacity-0');
-      }, 10);
-
-      // Auto dismiss
+      setTimeout(() => toast.classList.remove('translate-y-3', 'opacity-0'), 10);
       setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
       }, 3500);
     }
 
-    // Helper: Escape HTML to avoid XSS
     function escapeHtml(text) {
       if (!text) return '';
       return String(text)
