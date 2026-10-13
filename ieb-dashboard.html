@@ -641,7 +641,7 @@
           <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
             <div class="md:col-span-4 flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
               <div class="relative w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden bg-slate-200 mb-3 group">
-                <img id="formImagePreview" src="profile.png" alt="Candidate preview" class="w-full h-full object-cover">
+                <img id="formImagePreview" src="profile.png" onerror="this.src='profile.png'" alt="Candidate preview" class="w-full h-full object-cover">
               </div>
 
               <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
@@ -915,7 +915,7 @@
       <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 relative">
         <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5">
           <div class="relative shrink-0">
-            <img id="detailImage" src="profile.png" alt="Candidate" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl bg-slate-800">
+            <img id="detailImage" src="profile.png" onerror="this.src='profile.png'" alt="Candidate" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl bg-slate-800">
             <div class="absolute -bottom-2 -right-2 px-3 py-1 rounded-lg gold-gradient text-slate-950 font-black text-sm shadow-md border-2 border-white flex items-center gap-1">
               <span>#</span><span id="detailBallotNo">01</span>
             </div>
@@ -1676,7 +1676,8 @@
       const rawName = document.getElementById('formName').value.trim();
       const formattedName = rawName.toLowerCase().startsWith('engr.') ? rawName : `Engr. ${rawName}`;
 
-      let finalImageUrl = document.getElementById('formImagePreview').src;
+      const manualUrl = document.getElementById('formImageUrl').value.trim();
+      let finalImageUrl = manualUrl || 'profile.png';
 
       if (supabaseClient && selectedImageFile) {
         try {
@@ -1693,6 +1694,11 @@
         } catch (e) {
           console.warn("Storage upload error:", e);
         }
+      } else if (!manualUrl && selectedImageFile) {
+        finalImageUrl = document.getElementById('formImagePreview').src;
+      } else if (!manualUrl && id) {
+        const existingCand = candidates.find(c => c.id === id);
+        if (existingCand && existingCand.imageUrl) finalImageUrl = existingCand.imageUrl;
       }
 
       const dbPayload = {
