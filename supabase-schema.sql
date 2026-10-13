@@ -1,12 +1,64 @@
 -- =========================================================================
 -- IEB ELECTION: IIUC CANDIDATE DIRECTORY & VOTER GUIDE
--- Supabase Database Schema, Row-Level Security (RLS) & Storage Setup
+-- Supabase Database Schema, User Roles (app_users), RLS & Storage Setup
 -- =========================================================================
 
 -- 1. Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Create Candidates Table
+-- 2. Create Users & Roles Table (app_users)
+-- Any user has an email and a 'role' column. If role = 'admin', they get admin privileges!
+CREATE TABLE IF NOT EXISTS public.app_users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'moderator', 'user')),
+    name TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indexing for user roles
+CREATE INDEX IF NOT EXISTS idx_app_users_email ON public.app_users(email);
+CREATE INDEX IF NOT EXISTS idx_app_users_role ON public.app_users(role);
+
+-- Enable RLS on app_users
+ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to check user roles by email
+CREATE POLICY "Allow public read app_users by email"
+ON public.app_users
+FOR SELECT
+USING (true);
+
+-- Allow admins to manage app_users
+CREATE POLICY "Admins can manage app_users"
+ON public.app_users
+FOR ALL
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM public.app_users 
+        WHERE LOWER(app_users.email) = LOWER(auth.jwt() ->> 'email') 
+        AND app_users.role = 'admin'
+    )
+    OR (auth.jwt() ->> 'role') = 'service_role'
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.app_users 
+        WHERE LOWER(app_users.email) = LOWER(auth.jwt() ->> 'email') 
+        AND app_users.role = 'admin'
+    )
+    OR (auth.jwt() ->> 'role') = 'service_role'
+);
+
+-- Seed initial admin user
+INSERT INTO public.app_users (email, role, name)
+VALUES 
+('armanhossain.eee.info@gmail.com', 'admin', 'Engr. Arman Hossain')
+ON CONFLICT (email) DO UPDATE SET role = 'admin';
+
+-- 3. Create Candidates Table
 CREATE TABLE IF NOT EXISTS public.candidates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
@@ -43,7 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_candidates_ballot_no ON public.candidates(ballot_
 CREATE INDEX IF NOT EXISTS idx_candidates_department ON public.candidates(department);
 CREATE INDEX IF NOT EXISTS idx_candidates_division ON public.candidates(division);
 
--- 3. Row-Level Security (RLS)
+-- 4. Row-Level Security (RLS) on Candidates
 ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
 
 -- Policy 1: Public Read - Anyone can view APPROVED candidates
@@ -65,24 +117,33 @@ FOR UPDATE
 USING (status = 'approved')
 WITH CHECK (deletion_requested = TRUE);
 
--- Policy 4: Admin Full Access - Authenticated admin (armanhossain.eee.info@gmail.com)
-CREATE POLICY "Admin full access for armanhossain"
+-- Policy 4: Admin Full Access - Any user whose email in app_users has role = 'admin'
+CREATE POLICY "Admin full access based on app_users role"
 ON public.candidates
 FOR ALL
 TO authenticated
 USING (
-    (auth.jwt() ->> 'email') = 'armanhossain.eee.info@gmail.com'
+    EXISTS (
+        SELECT 1 FROM public.app_users 
+        WHERE LOWER(app_users.email) = LOWER(auth.jwt() ->> 'email')
+        AND app_users.role = 'admin'
+    )
     OR (auth.jwt() ->> 'role') = 'service_role'
 )
 WITH CHECK (
-    (auth.jwt() ->> 'email') = 'armanhossain.eee.info@gmail.com'
+    EXISTS (
+        SELECT 1 FROM public.app_users 
+        WHERE LOWER(app_users.email) = LOWER(auth.jwt() ->> 'email')
+        AND app_users.role = 'admin'
+    )
     OR (auth.jwt() ->> 'role') = 'service_role'
 );
 
--- 4. Enable Supabase Realtime on Candidates Table
+-- 5. Enable Supabase Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE public.candidates;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.app_users;
 
--- 5. Storage Bucket for Candidate Photos
+-- 6. Storage Bucket for Candidate Photos
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('candidate-photos', 'candidate-photos', true)
 ON CONFLICT (id) DO NOTHING;
@@ -96,7 +157,7 @@ CREATE POLICY "Anyone can upload candidate photos"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'candidate-photos');
 
--- 6. Initial Seed Candidates
+-- 7. Initial Seed Candidates
 INSERT INTO public.candidates (
     name, ballot_no, candidate_for, division, department, batch, membership_id,
     image_url, education, professional, extra_curricular, manifesto, phone, email, social, status

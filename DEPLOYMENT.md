@@ -4,21 +4,38 @@ This guide walks you through deploying the **IEB Election — IIUC Candidate Dir
 
 ---
 
-## 🗄️ Step 1: Set Up Supabase (Database & Realtime)
+## 🗄️ Step 1: Set Up Supabase (Database, Auth & Realtime)
 
 1. **Create Free Project**:
    - Go to [https://supabase.com](https://supabase.com) and log in.
-   - Click **"New Project"**, name it `ieb-iiuc-candidates`, choose a database password, and select region (e.g. `Singapore` or closest to Bangladesh).
+   - Click **"New Project"**, name it `ieb-iiuc-candidates`, choose a database password, and select region (e.g. `Singapore`).
 
 2. **Execute Database Schema & Policies**:
    - In your Supabase Dashboard, click on **SQL Editor** in the left sidebar.
-   - Click **"New Query"**, open and copy the entire contents of [`supabase-schema.sql`](./supabase-schema.sql).
-   - Paste into the query editor and click **Run** (Ctrl + Enter).
-   - *This creates the `candidates` table, enables Row-Level Security (RLS), adds permissions for public submissions + admin approval, creates the `candidate-photos` public storage bucket, and seeds realistic IIUC candidates.*
+   - Click **"New Query"**, copy the entire contents of [`supabase-schema.sql`](./supabase-schema.sql), paste into the editor, and click **Run**.
+   - *This creates:*
+     - The `app_users` table (stores email and `role`: `'admin'` or `'user'`).
+     - The `candidates` table with Row-Level Security (RLS) linked to `app_users`.
+     - The `candidate-photos` public storage bucket for photos.
+     - Realtime publication on both tables.
 
-3. **Copy API Credentials**:
+3. **Create Your Admin User in Supabase Auth**:
+   - In Supabase, go to **Authentication** → **Users**.
+   - Click **"Add user"** → **"Create user"**.
+   - Enter your email (e.g. `armanhossain.eee.info@gmail.com`) and choose your secure password.
+   - Click **"Auto Confirm User"** (or verify via email).
+
+4. **Verify / Add User Role in `app_users`**:
+   - In Supabase, go to **Table Editor** → **`app_users`**.
+   - Ensure a row exists for your email with `role` = **`admin`**:
+     | email | role | name |
+     |---|---|---|
+     | `armanhossain.eee.info@gmail.com` | `admin` | `Engr. Arman Hossain` |
+   - *(Note: You can add any other email and set `role` to `'admin'` to grant them admin access!)*
+
+5. **Copy API Credentials**:
    - In Supabase, navigate to **Project Settings** (gear icon) → **API**.
-   - Note down:
+   - Copy:
      - **Project URL**: `https://<your-project-id>.supabase.co`
      - **anon / public key**: `eyJhbGciOi...`
 
@@ -33,23 +50,21 @@ This guide walks you through deploying the **IEB Election — IIUC Candidate Dir
 
 2. **Add Environment Variables**:
    - In the Vercel project configuration screen, expand **Environment Variables**.
-   - Add the following two variables:
+   - Add:
      - `SUPABASE_URL`: `https://<your-project-id>.supabase.co`
      - `SUPABASE_ANON_KEY`: `<your-anon-public-key>`
 
 3. **Deploy**:
-   - Framework Preset: **Other** (or leave default).
-   - Root Directory: `./` (leave default).
    - Click **"Deploy"**.
-   - In less than 30 seconds, Vercel will build and give you a live production URL:
-     `https://iiuc-candidate-directory-voter-guide.vercel.app`
+   - In ~30 seconds, Vercel gives you your live production URL.
 
 ---
 
-## 🛡️ Step 3: Admin Dashboard Access
+## 🛡️ Step 3: Admin Sign In & Role Management
 
-- Navigate to your deployed Vercel site.
-- Click **`Admin`** at the top right.
-- **Admin Email**: `armanhossain.eee.info@gmail.com`
-- **Default Passcode / PIN**: `arman2026`
-- Once logged in, you can approve public submissions, review removal requests, and directly manage all candidates with real-time sync across all connected users!
+- Open your site and click **`Admin`** at the top right.
+- Sign in with the email and password you created in Supabase Auth.
+- The system automatically checks `app_users` table for your email:
+  - If `role === 'admin'`: **Admin Mode** activates immediately!
+  - If `role !== 'admin'`: Access is denied.
+- Admins can also click **`User Roles`** in the top bar to promote any other user's email to `admin` right from the dashboard.

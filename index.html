@@ -87,7 +87,7 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           ADMIN MODE ACTIVE
         </span>
-        <span class="text-slate-300">Logged in as: <strong class="text-amber-300 font-mono">armanhossain.eee.info@gmail.com</strong></span>
+        <span class="text-slate-300">Logged in: <strong id="adminEmailDisplay" class="text-amber-300 font-mono">admin@example.com</strong> (<span id="adminRoleDisplay" class="text-emerald-400 uppercase font-bold text-[10px]">ADMIN</span>)</span>
       </div>
 
       <div class="flex items-center gap-2">
@@ -99,6 +99,11 @@
         <button onclick="setAdminTab('deletions')" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold border border-rose-500/30 flex items-center gap-1.5 transition">
           <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
           <span>Deletion Requests (<span id="adminDeletionCountBadge">0</span>)</span>
+        </button>
+
+        <button onclick="openUsersManagementModal()" class="px-2.5 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold border border-emerald-600 flex items-center gap-1 transition">
+          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+          <span>User Roles</span>
         </button>
 
         <button onclick="logoutAdmin()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 flex items-center gap-1 transition">
@@ -141,7 +146,7 @@
           
           <!-- Supabase Cloud Connection Status Badge -->
           <button onclick="openSupabaseConfigModal()" id="supabaseStatusBtn" title="Supabase Cloud Connection" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-            <span id="supabaseStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span id="supabaseStatusDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
             <span id="supabaseStatusText" class="hidden sm:inline">Supabase</span>
           </button>
 
@@ -196,26 +201,6 @@
   <!-- MAIN CONTAINER -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- SUPABASE NOT CONNECTED ALERT (For First-time production setup) -->
-    <div id="supabaseSetupBanner" class="hidden bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-900 text-white border border-emerald-500/30 rounded-2xl p-5 no-print shadow-xl">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
-            <i data-lucide="database" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-sm text-white">Connect Supabase Cloud Database</h3>
-            <p class="text-xs text-slate-300 mt-0.5">
-              Connect your free Supabase project to enable real-time candidate synchronization across visitors and direct photo cloud storage.
-            </p>
-          </div>
-        </div>
-        <button onclick="openSupabaseConfigModal()" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs whitespace-nowrap shadow-md transition">
-          Connect Supabase in 1 Click
-        </button>
-      </div>
-    </div>
-
     <!-- PUBLIC SUBMISSION NOTICE / WORKFLOW BANNER -->
     <div id="publicNoticeBanner" class="bg-gradient-to-r from-amber-50 to-emerald-50 border border-amber-200/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-700 no-print shadow-sm">
       <div class="flex items-center gap-3">
@@ -225,7 +210,7 @@
         <div>
           <span class="font-bold text-slate-900">Open IIUC Candidate Submissions with Admin Approval:</span>
           <p class="text-slate-600 mt-0.5">
-            Anyone can submit a candidate profile or request a removal. All submissions undergo verification by administrator (<strong class="font-mono text-emerald-800 font-semibold">armanhossain.eee.info@gmail.com</strong>) before becoming live.
+            Anyone can submit a candidate profile or request a removal. All submissions undergo verification by authorized administrators before appearing on the public directory.
           </p>
         </div>
       </div>
@@ -255,8 +240,12 @@
         </div>
 
         <div class="flex items-center gap-2 text-xs">
+          <button onclick="openUsersManagementModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Manage Admin Roles</span>
+          </button>
           <button onclick="openSupabaseConfigModal()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold flex items-center gap-1.5 transition">
-            <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <i data-lucide="database" class="w-3.5 h-3.5 text-blue-600"></i>
             <span>Supabase Settings</span>
           </button>
         </div>
@@ -403,7 +392,7 @@
         <span id="currentTabLabel" class="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-medium">Live Approved</span>
       </div>
       <div class="text-right">
-        <span>Admin: <strong class="text-emerald-700 font-mono">armanhossain.eee.info@gmail.com</strong></span>
+        <span>IIUC Engineering Fraternity Candidate Portal</span>
       </div>
     </div>
 
@@ -456,16 +445,16 @@
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-        <span class="font-semibold text-slate-700">IEB IIUC Candidate Directory & Voter Guide</span> • Production on Vercel & Supabase
+        <span class="font-semibold text-slate-700">IEB IIUC Candidate Directory & Voter Guide</span>
       </div>
       <div>
-        <span>Admin: <a href="mailto:armanhossain.eee.info@gmail.com" class="text-emerald-700 font-semibold hover:underline">armanhossain.eee.info@gmail.com</a></span>
+        <span>Role-Based Administration & Realtime Supabase Database</span>
       </div>
     </div>
   </footer>
 
   <!-- ========================================================================= -->
-  <!-- MODAL 1: ADMIN LOGIN MODAL                                                -->
+  <!-- MODAL 1: ADMIN LOGIN MODAL (SUPABASE AUTH - CLEAN, NO DEFAULT PASSWORDS)   -->
   <!-- ========================================================================= -->
   <div id="adminLoginModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
@@ -476,13 +465,13 @@
         <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 mx-auto flex items-center justify-center mb-3">
           <i data-lucide="shield-check" class="w-6 h-6"></i>
         </div>
-        <h3 class="text-xl font-bold font-display">Administrator Portal</h3>
-        <p class="text-xs text-emerald-200 mt-1">Review submissions and authorize candidates</p>
+        <h3 class="text-xl font-bold font-display">Administrator Sign In</h3>
+        <p class="text-xs text-emerald-200 mt-1">Sign in with your authorized admin email</p>
       </div>
 
       <form onsubmit="handleAdminLogin(event)" class="p-6 space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Email Address</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               <i data-lucide="mail" class="w-4 h-4"></i>
@@ -491,40 +480,105 @@
               type="email" 
               id="adminLoginEmail" 
               required 
-              value="armanhossain.eee.info@gmail.com" 
+              placeholder="name@example.com" 
               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
           </div>
-          <span class="text-[11px] text-slate-400 mt-1">Authorized for: armanhossain.eee.info@gmail.com</span>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Passcode / Security PIN</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <i data-lucide="key" class="w-4 h-4"></i>
+              <i data-lucide="lock" class="w-4 h-4"></i>
             </div>
             <input 
               type="password" 
-              id="adminLoginPasscode" 
+              id="adminLoginPassword" 
               required 
-              placeholder="Enter passcode" 
+              placeholder="••••••••" 
               class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
           </div>
-          <div class="flex items-center justify-between mt-1 text-[11px] text-slate-500">
-            <span>Default PIN: <strong class="text-emerald-700">arman2026</strong></span>
-            <button type="button" onclick="sendSupabaseMagicLink()" class="text-emerald-600 hover:underline">Send Magic Link to Email</button>
-          </div>
         </div>
 
-        <div class="pt-3">
-          <button type="submit" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2">
+        <div class="pt-2">
+          <button type="submit" id="adminLoginSubmitBtn" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2">
             <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span>Authenticate as Admin</span>
+            <span id="adminLoginSubmitText">Sign In as Admin</span>
+          </button>
+        </div>
+
+        <div class="pt-1 text-center">
+          <button type="button" onclick="sendSupabaseMagicLink()" class="text-xs text-emerald-600 hover:underline font-semibold">
+            Or send Magic Login Link to your Email
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: MANAGE USER ROLES (ADMIN ONLY)                                     -->
+  <!-- ========================================================================= -->
+  <div id="usersManagementModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-emerald-950 to-slate-900 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">User Roles & Access Control</h3>
+            <p class="text-xs text-emerald-200">Users with role = 'admin' receive full dashboard privileges</p>
+          </div>
+        </div>
+        <button onclick="closeUsersManagementModal()" class="text-white/70 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <!-- Add New User Role Form -->
+        <form onsubmit="handleAssignUserRole(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Assign / Update User Role</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+            <div class="sm:col-span-6">
+              <input type="email" id="assignUserEmail" required placeholder="user@example.com" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg">
+            </div>
+            <div class="sm:col-span-3">
+              <select id="assignUserRole" class="w-full px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-bold text-slate-700">
+                <option value="admin">admin</option>
+                <option value="user">user</option>
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <button type="submit" class="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm">
+                Save Role
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Current User Roles Table -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Registered Users & Roles (app_users table)</h4>
+          <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 uppercase font-semibold border-b">
+                <tr>
+                  <th class="px-4 py-2">Email</th>
+                  <th class="px-4 py-2">Role</th>
+                  <th class="px-4 py-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="appUsersTableBody" class="divide-y divide-slate-100">
+                <!-- Dynamically loaded rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -541,7 +595,7 @@
           </div>
           <div>
             <h3 id="formModalTitle" class="text-lg font-bold font-display tracking-wide">Submit Candidate Entry</h3>
-            <p id="formModalSubtitle" class="text-xs text-emerald-200">Requires review & approval by armanhossain.eee.info@gmail.com</p>
+            <p id="formModalSubtitle" class="text-xs text-emerald-200">Requires review & approval by administrator</p>
           </div>
         </div>
         <button onclick="closeCandidateFormModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
@@ -551,7 +605,7 @@
 
       <div id="formWorkflowAlert" class="bg-amber-50 px-6 py-2.5 border-b border-amber-200 text-xs text-amber-900 flex items-center gap-2">
         <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
-        <span>Public submission notice: Once submitted, your candidate entry will be reviewed by administrator before appearing on the public directory.</span>
+        <span>Public submission notice: Once submitted, your candidate entry will be reviewed by an administrator before appearing on the public directory.</span>
       </div>
 
       <form id="candidateForm" onsubmit="handleSaveCandidate(event)" class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
@@ -704,7 +758,7 @@
         <!-- SECTION 3: SUBMITTER & CONTACT INFO -->
         <div>
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-1.5">
-            <i data-lucide="phone-call" class="w-4 h-4 text-emerald-600"></i> Contact & Submitter Verification
+            <i data-lucide="phone-call" class="w-4 h-4 text-emerald-600"></i> Contact & Submitter Info
           </h4>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -730,14 +784,14 @@
               <input type="text" id="formSubmitterName" placeholder="e.g. Self / Batchmate / Campaign Team" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Email (for verification notification)</label>
+              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Email (for notification)</label>
               <input type="email" id="formSubmitterEmail" placeholder="your.email@example.com" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
             </div>
           </div>
         </div>
 
         <div class="pt-4 border-t border-slate-200 flex items-center justify-between">
-          <span class="text-[11px] text-slate-500" id="formNoticeFooter">Admin Review: armanhossain.eee.info@gmail.com</span>
+          <span class="text-[11px] text-slate-500" id="formNoticeFooter">All submissions are reviewed by administrators before going live.</span>
           <div class="flex items-center gap-2">
             <button type="button" onclick="closeCandidateFormModal()" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100">Cancel</button>
             <button type="submit" id="formSubmitBtn" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md flex items-center gap-1.5">
@@ -791,7 +845,7 @@
 
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Details & Verification Note <span class="text-rose-500">*</span></label>
-          <textarea id="deletionDetails" required rows="3" placeholder="Provide proof or details for the administrator (armanhossain.eee.info@gmail.com)..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"></textarea>
+          <textarea id="deletionDetails" required rows="3" placeholder="Provide proof or details for the administrator..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"></textarea>
         </div>
 
         <div>
@@ -925,10 +979,6 @@
       </div>
 
       <div class="p-6 space-y-4 text-xs text-slate-600">
-        <p>
-          Connect your free <strong>Supabase</strong> project to store all candidates, pending approval submissions, and photos in the cloud:
-        </p>
-
         <div>
           <label class="block font-bold text-slate-700 mb-1">Project URL (SUPABASE_URL):</label>
           <input type="text" id="supabaseUrlInput" placeholder="https://xyzcompany.supabase.co" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono">
@@ -942,7 +992,6 @@
         <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 space-y-1">
           <p><strong>Where to find these in Supabase?</strong></p>
           <p>Go to your Supabase project → <strong>Settings</strong> → <strong>API</strong> → Copy <strong>Project URL</strong> and <strong>anon public key</strong>.</p>
-          <p class="text-[11px] text-emerald-700">Remember to run the <code>supabase-schema.sql</code> script in Supabase SQL Editor!</p>
         </div>
 
         <div class="flex items-center justify-between pt-2">
@@ -957,17 +1006,16 @@
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
   <!-- ========================================================================= -->
-  <!-- JAVASCRIPT: SUPABASE V2 INTEGRATION & APPLICATION CONTROLLER             -->
+  <!-- JAVASCRIPT: SUPABASE AUTH & ROLE-BASED ACCESS CONTROLLER                 -->
   <!-- ========================================================================= -->
   <script>
-    const ADMIN_EMAIL = "armanhossain.eee.info@gmail.com";
-    const ADMIN_DEFAULT_PIN = "arman2026";
     const STORAGE_KEY_SUPABASE = "ieb_supabase_config";
-    const STORAGE_KEY_ADMIN_AUTH = "ieb_iiuc_admin_session";
+    const STORAGE_KEY_ADMIN_AUTH = "ieb_iiuc_admin_user_session";
     const STORAGE_KEY_LOCAL_BACKUP = "ieb_candidates_backup";
 
     let supabaseClient = null;
     let candidates = [];
+    let currentAdminUser = null; // { email, role, name }
     let isAdminLoggedIn = false;
     let currentAdminTab = 'live'; // 'live', 'pending', 'deletions'
     let currentViewMode = 'grid'; // 'grid', 'table'
@@ -975,7 +1023,7 @@
 
     // Initialization
     window.addEventListener('DOMContentLoaded', async () => {
-      checkAdminSession();
+      restoreAdminSession();
       await initializeSupabase();
       await loadCandidates();
       populateFilterDropdowns();
@@ -983,10 +1031,18 @@
       lucide.createIcons();
     });
 
-    // Check existing Admin Session
-    function checkAdminSession() {
-      const session = localStorage.getItem(STORAGE_KEY_ADMIN_AUTH);
-      isAdminLoggedIn = (session === ADMIN_EMAIL);
+    // Restore Admin Session from storage
+    function restoreAdminSession() {
+      const stored = localStorage.getItem(STORAGE_KEY_ADMIN_AUTH);
+      if (stored) {
+        try {
+          const user = JSON.parse(stored);
+          if (user && user.role === 'admin') {
+            currentAdminUser = user;
+            isAdminLoggedIn = true;
+          }
+        } catch (e) {}
+      }
       updateAdminBarUI();
     }
 
@@ -1000,8 +1056,10 @@
       const formAlert = document.getElementById('formWorkflowAlert');
       const submitterRow = document.getElementById('submitterInfoRow');
       const submitBtnText = document.getElementById('formSubmitBtnText');
+      const emailDisplay = document.getElementById('adminEmailDisplay');
+      const roleDisplay = document.getElementById('adminRoleDisplay');
 
-      if (isAdminLoggedIn) {
+      if (isAdminLoggedIn && currentAdminUser) {
         topBar.classList.remove('hidden');
         tabsWrapper.classList.remove('hidden');
         publicBanner.classList.add('hidden');
@@ -1010,6 +1068,10 @@
         if (formAlert) formAlert.classList.add('hidden');
         if (submitterRow) submitterRow.classList.add('hidden');
         if (submitBtnText) submitBtnText.textContent = "Publish Candidate Directly";
+
+        if (emailDisplay) emailDisplay.textContent = currentAdminUser.email;
+        if (roleDisplay) roleDisplay.textContent = currentAdminUser.role.toUpperCase();
+
         adminLoginBtn.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i><span>Admin Active</span>`;
         adminLoginBtn.onclick = () => setAdminTab('pending');
       } else {
@@ -1017,7 +1079,7 @@
         tabsWrapper.classList.add('hidden');
         publicBanner.classList.remove('hidden');
         submitBtnLabel.textContent = "+ Submit Candidate";
-        if (formSubtitle) formSubtitle.textContent = "Requires review & approval by armanhossain.eee.info@gmail.com";
+        if (formSubtitle) formSubtitle.textContent = "Requires review & approval by administrator";
         if (formAlert) formAlert.classList.remove('hidden');
         if (submitterRow) submitterRow.classList.remove('hidden');
         if (submitBtnText) submitBtnText.textContent = "Submit for Admin Approval";
@@ -1029,12 +1091,12 @@
     }
 
     // =========================================================================
-    // SUPABASE CLIENT SETUP & REALTIME SYNC
+    // SUPABASE INITIALIZATION & REALTIME
     // =========================================================================
     async function initializeSupabase() {
       let config = null;
 
-      // 1. Check Vercel serverless /api/config
+      // Check Vercel serverless /api/config
       try {
         const res = await fetch('/api/config');
         if (res.ok) {
@@ -1043,11 +1105,9 @@
             config = apiConfig;
           }
         }
-      } catch (e) {
-        // Not on Vercel or running locally
-      }
+      } catch (e) {}
 
-      // 2. Check localStorage fallback
+      // Check localStorage
       if (!config) {
         const stored = localStorage.getItem(STORAGE_KEY_SUPABASE);
         if (stored) {
@@ -1057,14 +1117,19 @@
 
       const statusDot = document.getElementById('supabaseStatusDot');
       const statusText = document.getElementById('supabaseStatusText');
-      const setupBanner = document.getElementById('supabaseSetupBanner');
 
       if (config && config.supabaseUrl && config.supabaseAnonKey && window.supabase) {
         try {
           supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
           statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
           statusText.textContent = 'Supabase Cloud Live';
-          setupBanner.classList.add('hidden');
+
+          // Auth State Listener
+          supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            if (session && session.user && session.user.email) {
+              await verifyAndSetUserRole(session.user.email);
+            }
+          });
 
           // Subscribe to Realtime Postgres Changes
           supabaseClient
@@ -1076,33 +1141,23 @@
 
           return;
         } catch (err) {
-          console.error("Failed to initialize Supabase:", err);
+          console.error("Supabase init error:", err);
         }
       }
 
-      // If not connected
       statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
       statusText.textContent = 'Supabase Setup';
-      if (!isAdminLoggedIn) {
-        setupBanner.classList.add('hidden');
-      } else {
-        setupBanner.classList.remove('hidden');
-      }
     }
 
-    // Load Candidates (From Supabase or Local Backup)
+    // Load Candidates
     async function loadCandidates() {
       if (supabaseClient) {
         try {
           let query = supabaseClient.from('candidates').select('*');
-          
-          // Non-admin can only select approved
           if (!isAdminLoggedIn) {
             query = query.eq('status', 'approved');
           }
-
           const { data, error } = await query.order('ballot_no', { ascending: true });
-
           if (!error && data) {
             candidates = data.map(normalizeCandidateRecord);
             localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
@@ -1112,11 +1167,10 @@
             return;
           }
         } catch (err) {
-          console.warn("Supabase fetch failed, falling back to local storage:", err);
+          console.warn("Supabase fetch failed:", err);
         }
       }
 
-      // LocalStorage fallback
       const stored = localStorage.getItem(STORAGE_KEY_LOCAL_BACKUP);
       if (stored) {
         try { candidates = JSON.parse(stored); } catch (e) {}
@@ -1126,7 +1180,6 @@
       renderUI();
     }
 
-    // Convert snake_case db columns to UI camelCase
     function normalizeCandidateRecord(c) {
       return {
         id: c.id,
@@ -1157,7 +1210,6 @@
       };
     }
 
-    // Update Counts & Badges
     function updateCountsAndBadges() {
       const approvedCount = candidates.filter(c => c.status === 'approved').length;
       const pendingCount = candidates.filter(c => c.status === 'pending').length;
@@ -1180,7 +1232,6 @@
       document.getElementById('statDivisions').textContent = uniqueDivs;
     }
 
-    // Dynamic Filter Dropdowns
     function populateFilterDropdowns() {
       const postSelect = document.getElementById('filterPost');
       const deptSelect = document.getElementById('filterDepartment');
@@ -1204,7 +1255,6 @@
         divs.map(d => `<option value="${escapeHtml(d)}" ${d === currentDiv ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
     }
 
-    // Search and Filters
     function handleSearchFilter() {
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
       const post = document.getElementById('filterPost').value;
@@ -1245,7 +1295,6 @@
         return true;
       });
 
-      // Sort
       filtered.sort((a, b) => {
         if (sortBy === 'ballot_asc') return (parseInt(a.ballotNo, 10) || 999) - (parseInt(b.ballotNo, 10) || 999);
         if (sortBy === 'ballot_desc') return (parseInt(b.ballotNo, 10) || 0) - (parseInt(a.ballotNo, 10) || 0);
@@ -1288,7 +1337,6 @@
       lucide.createIcons();
     }
 
-    // Card Renderer
     function renderCandidateCard(cand) {
       const safeId = escapeHtml(cand.id);
       const img = cand.imageUrl || 'profile.png';
@@ -1413,7 +1461,6 @@
       `;
     }
 
-    // Table Renderer
     function renderCandidateTableRow(cand) {
       const safeId = escapeHtml(cand.id);
       const img = cand.imageUrl || 'profile.png';
@@ -1462,7 +1509,7 @@
     }
 
     // =========================================================================
-    // CANDIDATE SUBMISSION WITH SUPABASE STORAGE & DATABASE
+    // CANDIDATE SUBMISSION (ADD / EDIT)
     // =========================================================================
     function openCandidateFormModal() {
       document.getElementById('candidateForm').reset();
@@ -1560,7 +1607,6 @@
 
       let finalImageUrl = document.getElementById('formImagePreview').src;
 
-      // Upload photo to Supabase Storage if configured and file is selected
       if (supabaseClient && selectedImageFile) {
         try {
           const fileExt = selectedImageFile.name.split('.').pop();
@@ -1595,8 +1641,8 @@
         social: document.getElementById('formSocial').value.trim(),
         image_url: finalImageUrl,
         status: isAdminLoggedIn ? 'approved' : 'pending',
-        submitter_name: isAdminLoggedIn ? 'Admin' : (document.getElementById('formSubmitterName').value.trim() || 'Public Submitter'),
-        submitter_email: isAdminLoggedIn ? ADMIN_EMAIL : (document.getElementById('formSubmitterEmail').value.trim() || ''),
+        submitter_name: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.name : 'Admin') : (document.getElementById('formSubmitterName').value.trim() || 'Public Submitter'),
+        submitter_email: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.email : '') : (document.getElementById('formSubmitterEmail').value.trim() || ''),
         updated_at: new Date().toISOString()
       };
 
@@ -1613,13 +1659,12 @@
           } else {
             const { error } = await supabaseClient.from('candidates').insert([dbPayload]);
             if (error) throw error;
-            showToast(isAdminLoggedIn ? 'Candidate published!' : `Submitted! Awaiting approval by ${ADMIN_EMAIL}`, 'success');
+            showToast(isAdminLoggedIn ? 'Candidate published directly!' : `Submitted! Awaiting admin approval.`, 'success');
           }
         } catch (err) {
           showToast(`Database error: ${err.message}`, 'error');
         }
       } else {
-        // Fallback local storage
         const localRecord = normalizeCandidateRecord({ id: id || ('local_' + Date.now()), ...dbPayload });
         if (id) {
           const idx = candidates.findIndex(c => c.id === id);
@@ -1748,7 +1793,7 @@
       }
 
       closeRequestDeletionModal();
-      showToast(`Removal request submitted! Forwarded to admin (${ADMIN_EMAIL})`, 'info');
+      showToast(`Removal request submitted! Awaiting administrator review.`, 'info');
       await loadCandidates();
     }
 
@@ -1885,9 +1930,11 @@
     }
 
     // =========================================================================
-    // ADMIN AUTHENTICATION
+    // ADMIN AUTHENTICATION (SUPABASE AUTH & ROLE VERIFICATION)
     // =========================================================================
     function openAdminLoginModal() {
+      document.getElementById('adminLoginEmail').value = '';
+      document.getElementById('adminLoginPassword').value = '';
       document.getElementById('adminLoginModal').classList.remove('hidden');
       lucide.createIcons();
     }
@@ -1896,47 +1943,119 @@
       document.getElementById('adminLoginModal').classList.add('hidden');
     }
 
-    function handleAdminLogin(event) {
+    async function handleAdminLogin(event) {
       event.preventDefault();
       const email = document.getElementById('adminLoginEmail').value.trim();
-      const pin = document.getElementById('adminLoginPasscode').value.trim();
+      const password = document.getElementById('adminLoginPassword').value;
 
-      if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && (pin === ADMIN_DEFAULT_PIN || pin === "armanhossain")) {
-        isAdminLoggedIn = true;
-        localStorage.setItem(STORAGE_KEY_ADMIN_AUTH, ADMIN_EMAIL);
-        closeAdminLoginModal();
-        updateAdminBarUI();
-        loadCandidates();
-        showToast("Welcome Engr. Arman Hossain! Administrator access active.", "success");
-      } else {
-        showToast("Invalid Admin PIN. Default PIN is arman2026", "error");
+      const submitBtn = document.getElementById('adminLoginSubmitBtn');
+      const submitText = document.getElementById('adminLoginSubmitText');
+      submitBtn.disabled = true;
+      submitText.textContent = "Verifying...";
+
+      if (supabaseClient) {
+        try {
+          // 1. Authenticate with Supabase Auth
+          const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+          });
+
+          if (authError) {
+            submitBtn.disabled = false;
+            submitText.textContent = "Sign In as Admin";
+            showToast('Authentication failed: ' + authError.message, 'error');
+            return;
+          }
+
+          // 2. Verify User Role in app_users table
+          await verifyAndSetUserRole(email);
+
+          submitBtn.disabled = false;
+          submitText.textContent = "Sign In as Admin";
+          closeAdminLoginModal();
+          return;
+        } catch (err) {
+          submitBtn.disabled = false;
+          submitText.textContent = "Sign In as Admin";
+          showToast('Login error: ' + err.message, 'error');
+          return;
+        }
+      }
+
+      submitBtn.disabled = false;
+      submitText.textContent = "Sign In as Admin";
+      showToast('Supabase is not connected yet. Please connect Supabase to sign in.', 'error');
+    }
+
+    async function verifyAndSetUserRole(email) {
+      if (!supabaseClient) return;
+
+      try {
+        const { data: userProfile, error } = await supabaseClient
+          .from('app_users')
+          .select('email, role, name')
+          .ilike('email', email)
+          .maybeSingle();
+
+        if (userProfile && userProfile.role === 'admin') {
+          currentAdminUser = {
+            email: userProfile.email,
+            name: userProfile.name || userProfile.email,
+            role: userProfile.role
+          };
+          isAdminLoggedIn = true;
+          localStorage.setItem(STORAGE_KEY_ADMIN_AUTH, JSON.stringify(currentAdminUser));
+          updateAdminBarUI();
+          await loadCandidates();
+          showToast(`Welcome ${currentAdminUser.name}! Administrator access active.`, 'success');
+        } else {
+          // User exists in auth but NOT admin in app_users
+          await supabaseClient.auth.signOut();
+          currentAdminUser = null;
+          isAdminLoggedIn = false;
+          localStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
+          updateAdminBarUI();
+          showToast(`Access Restricted: Account "${email}" does not have administrator privileges (role: ${userProfile ? userProfile.role : 'none'}).`, 'error');
+        }
+      } catch (err) {
+        console.error("Role verification error:", err);
       }
     }
 
     async function sendSupabaseMagicLink() {
+      const email = document.getElementById('adminLoginEmail').value.trim();
+      if (!email) {
+        showToast('Please enter your email address first.', 'info');
+        return;
+      }
       if (!supabaseClient) {
-        showToast('Connect Supabase first to use email magic link login.', 'info');
+        showToast('Connect Supabase first to use magic link login.', 'error');
         return;
       }
       try {
         const { error } = await supabaseClient.auth.signInWithOtp({
-          email: ADMIN_EMAIL,
+          email: email,
           options: { emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
-        showToast(`Magic login link dispatched to ${ADMIN_EMAIL}! Check your inbox.`, 'success');
+        showToast(`Magic login link sent to ${email}! Check your inbox.`, 'success');
       } catch (err) {
         showToast(`Auth error: ${err.message}`, 'error');
       }
     }
 
-    function logoutAdmin() {
+    async function logoutAdmin() {
+      if (supabaseClient) {
+        try { await supabaseClient.auth.signOut(); } catch (e) {}
+      }
+      currentAdminUser = null;
       isAdminLoggedIn = false;
       localStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
       currentAdminTab = 'live';
       updateAdminBarUI();
-      loadCandidates();
-      showToast("Admin session ended. Public directory view active.", "info");
+      await loadCandidates();
+      showToast("Logged out successfully. Public directory view active.", "info");
     }
 
     function setAdminTab(tab) {
@@ -1962,6 +2081,106 @@
       }
 
       handleSearchFilter();
+    }
+
+    // =========================================================================
+    // USER ROLES MANAGEMENT MODAL (app_users)
+    // =========================================================================
+    async function openUsersManagementModal() {
+      if (!isAdminLoggedIn) return;
+      document.getElementById('usersManagementModal').classList.remove('hidden');
+      await loadAppUsersTable();
+      lucide.createIcons();
+    }
+
+    function closeUsersManagementModal() {
+      document.getElementById('usersManagementModal').classList.add('hidden');
+    }
+
+    async function loadAppUsersTable() {
+      const tbody = document.getElementById('appUsersTableBody');
+      tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-slate-400">Loading user roles...</td></tr>';
+
+      if (!supabaseClient) {
+        tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-slate-400">Supabase not connected.</td></tr>';
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('app_users')
+          .select('*')
+          .order('role', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-3 text-center text-slate-400">No users found in app_users table.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(u => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-2 font-mono text-slate-800">${escapeHtml(u.email)}</td>
+            <td class="px-4 py-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'admin' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+                ${escapeHtml(u.role)}
+              </span>
+            </td>
+            <td class="px-4 py-2 text-right">
+              ${u.role === 'admin' ? `
+                <button onclick="changeUserRole('${escapeHtml(u.email)}', 'user')" class="text-rose-600 hover:underline text-[11px] font-semibold">Demote to User</button>
+              ` : `
+                <button onclick="changeUserRole('${escapeHtml(u.email)}', 'admin')" class="text-emerald-700 hover:underline text-[11px] font-semibold">Make Admin</button>
+              `}
+            </td>
+          </tr>
+        `).join('');
+
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-3 text-center text-rose-500">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function handleAssignUserRole(event) {
+      event.preventDefault();
+      const email = document.getElementById('assignUserEmail').value.trim();
+      const role = document.getElementById('assignUserRole').value;
+
+      if (!email || !supabaseClient) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('app_users')
+          .upsert({ email: email, role: role, updated_at: new Date().toISOString() }, { onConflict: 'email' });
+
+        if (error) throw error;
+
+        showToast(`Role "${role}" saved for ${email}!`, 'success');
+        document.getElementById('assignUserEmail').value = '';
+        await loadAppUsersTable();
+      } catch (err) {
+        showToast('Failed to assign role: ' + err.message, 'error');
+      }
+    }
+
+    async function changeUserRole(email, newRole) {
+      if (!confirm(`Change role of ${email} to "${newRole}"?`)) return;
+      if (!supabaseClient) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('app_users')
+          .update({ role: newRole, updated_at: new Date().toISOString() })
+          .eq('email', email);
+
+        if (error) throw error;
+        showToast(`Updated ${email} to ${newRole}!`, 'success');
+        await loadAppUsersTable();
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
     }
 
     // =========================================================================
