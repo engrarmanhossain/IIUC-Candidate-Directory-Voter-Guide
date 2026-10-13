@@ -362,7 +362,14 @@
       </div>
 
       <!-- FILTER DROPDOWNS -->
-      <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 text-xs">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 pt-2 border-t border-slate-100 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-500 mb-1">Election Session</label>
+          <select id="filterSession" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500 font-medium">
+            <option value="">All Sessions</option>
+          </select>
+        </div>
+
         <div>
           <label class="block font-semibold text-slate-500 mb-1">Candidate For (Post)</label>
           <select id="filterPost" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500">
@@ -675,6 +682,23 @@
               </div>
 
               <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Election Session / Term <span class="text-rose-500">*</span></label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-600">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                  </div>
+                  <input type="text" id="formSession" list="sessionSuggestions" required placeholder="e.g. 2025-2026" value="2025-2026" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <datalist id="sessionSuggestions">
+                    <option value="2025-2026">
+                    <option value="2026-2027">
+                    <option value="2027-2028">
+                    <option value="2024-2025">
+                    <option value="2023-2024">
+                  </datalist>
+                </div>
+              </div>
+
+              <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Candidate For (Post) <span class="text-rose-500">*</span></label>
                 <input type="text" id="formCandidateFor" list="positionSuggestions" required placeholder="e.g. Vice-Chairman, Center Secretary..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
                 <datalist id="positionSuggestions">
@@ -695,8 +719,17 @@
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">IIUC Batch <span class="text-rose-500">*</span></label>
-                <input type="text" id="formBatch" required placeholder="e.g. 18th Batch / Autumn 2008" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Division / Center <span class="text-rose-500">*</span></label>
+                <input type="text" id="formDivision" list="divisionSuggestions" required placeholder="e.g. Chattogram Center, Central Council..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
+                <datalist id="divisionSuggestions">
+                  <option value="Chattogram Center">
+                  <option value="Dhaka Center">
+                  <option value="Central Council">
+                  <option value="Electrical Engineering Division">
+                  <option value="Computer Engineering Division">
+                  <option value="Civil Engineering Division">
+                  <option value="Mechanical Engineering Division">
+                </datalist>
               </div>
 
               <div>
@@ -714,6 +747,11 @@
               </div>
 
               <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">IIUC Batch <span class="text-rose-500">*</span></label>
+                <input type="text" id="formBatch" required placeholder="e.g. 18th Batch / Autumn 2008" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
+              </div>
+
+              <div class="sm:col-span-2">
                 <label class="block text-xs font-bold text-slate-700 mb-1">IEB Membership ID <span class="text-rose-500">*</span></label>
                 <div class="relative">
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-600">
@@ -722,20 +760,7 @@
                   <input type="text" id="formMembershipId" required placeholder="e.g. M-28491 or F-12340" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
                 </div>
               </div>
-
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Division / Center <span class="text-rose-500">*</span></label>
-                <input type="text" id="formDivision" list="divisionSuggestions" required placeholder="e.g. Chattogram Center, Central Council..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
-                <datalist id="divisionSuggestions">
-                  <option value="Chattogram Center">
-                  <option value="Dhaka Center">
-                  <option value="Central Council">
-                  <option value="Electrical Engineering Division">
-                  <option value="Computer Engineering Division">
-                  <option value="Civil Engineering Division">
-                  <option value="Mechanical Engineering Division">
-                </datalist>
-              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -899,6 +924,10 @@
           <div class="text-center sm:text-left flex-1">
             <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
               <span id="detailCandidateForBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-900 shadow-sm">Candidate Post</span>
+              <span id="detailSessionBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-emerald-200 border border-emerald-400/30 flex items-center gap-1">
+                <i data-lucide="calendar" class="w-3 h-3 text-emerald-300"></i>
+                <span id="detailSessionText">Session: 2025-2026</span>
+              </span>
               <span id="detailDivisionBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Division / Center</span>
               <span id="detailStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[11px] font-bold"></span>
             </div>
@@ -1199,6 +1228,7 @@
         id: c.id,
         name: c.name,
         ballotNo: c.ballot_no,
+        session: c.election_session || c.session || '2025-2026',
         candidateFor: c.candidate_for,
         division: c.division,
         department: c.department,
@@ -1247,17 +1277,25 @@
     }
 
     function populateFilterDropdowns() {
+      const sessionSelect = document.getElementById('filterSession');
       const postSelect = document.getElementById('filterPost');
       const deptSelect = document.getElementById('filterDepartment');
       const divSelect = document.getElementById('filterDivision');
 
+      const currentSession = sessionSelect ? sessionSelect.value : '';
       const currentPost = postSelect.value;
       const currentDept = deptSelect.value;
       const currentDiv = divSelect.value;
 
+      const sessions = Array.from(new Set(candidates.map(c => c.session || '2025-2026').filter(Boolean))).sort().reverse();
       const posts = Array.from(new Set(candidates.map(c => c.candidateFor).filter(Boolean))).sort();
       const depts = Array.from(new Set(candidates.map(c => c.department).filter(Boolean))).sort();
       const divs = Array.from(new Set(candidates.map(c => c.division).filter(Boolean))).sort();
+
+      if (sessionSelect) {
+        sessionSelect.innerHTML = '<option value="">All Sessions</option>' + 
+          sessions.map(s => `<option value="${escapeHtml(s)}" ${s === currentSession ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
+      }
 
       postSelect.innerHTML = '<option value="">All Positions</option>' + 
         posts.map(p => `<option value="${escapeHtml(p)}" ${p === currentPost ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
@@ -1271,6 +1309,7 @@
 
     function handleSearchFilter() {
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const session = document.getElementById('filterSession') ? document.getElementById('filterSession').value : '';
       const post = document.getElementById('filterPost').value;
       const dept = document.getElementById('filterDepartment').value;
       const division = document.getElementById('filterDivision').value;
@@ -1295,13 +1334,14 @@
 
         if (search) {
           const matchTarget = [
-            cand.name, cand.ballotNo, cand.membershipId, cand.batch,
+            cand.name, cand.ballotNo, cand.session, cand.membershipId, cand.batch,
             cand.department, cand.candidateFor, cand.division,
             cand.professional, cand.education
           ].join(' ').toLowerCase();
           if (!matchTarget.includes(search)) return false;
         }
 
+        if (session && (cand.session || '2025-2026') !== session) return false;
         if (post && cand.candidateFor !== post) return false;
         if (dept && cand.department !== dept) return false;
         if (division && cand.division !== division) return false;
@@ -1320,7 +1360,7 @@
       });
 
       document.getElementById('filteredCount').textContent = filtered.length;
-      const hasActive = Boolean(search || post || dept || division);
+      const hasActive = Boolean(search || session || post || dept || division);
       const activeBadge = document.getElementById('activeFilterBadge');
       if (hasActive) activeBadge.classList.remove('hidden');
       else activeBadge.classList.add('hidden');
@@ -1426,9 +1466,15 @@
               </div>
               <div class="text-right">
                 ${statusBadge}
-                <span class="block text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md mt-1">
-                  ${escapeHtml(cand.candidateFor || 'Candidate')}
-                </span>
+                <div class="flex items-center justify-end gap-1.5 mt-1">
+                  <span class="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <i data-lucide="calendar" class="w-3 h-3 text-emerald-600"></i>
+                    ${escapeHtml(cand.session || '2025-2026')}
+                  </span>
+                  <span class="block text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md">
+                    ${escapeHtml(cand.candidateFor || 'Candidate')}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1503,7 +1549,12 @@
               </div>
             </div>
           </td>
-          <td class="px-4 py-3 text-xs font-semibold text-emerald-800">${escapeHtml(cand.candidateFor || '')}</td>
+          <td class="px-4 py-3 text-xs font-semibold text-emerald-800">
+            ${escapeHtml(cand.candidateFor || '')}
+            <span class="block text-[11px] font-normal text-slate-500 flex items-center gap-1 mt-0.5">
+              <i data-lucide="calendar" class="w-3 h-3 text-emerald-600"></i> ${escapeHtml(cand.session || '2025-2026')}
+            </span>
+          </td>
           <td class="px-4 py-3 text-xs"><strong>${escapeHtml(cand.department || '')}</strong> • ${escapeHtml(cand.batch || '')}</td>
           <td class="px-4 py-3 font-mono text-xs font-bold text-slate-700">${escapeHtml(cand.membershipId || 'N/A')}</td>
           <td class="px-4 py-3">${statusBadge}</td>
@@ -1528,6 +1579,9 @@
     function openCandidateFormModal() {
       document.getElementById('candidateForm').reset();
       document.getElementById('candidateId').value = '';
+      if (document.getElementById('formSession')) {
+        document.getElementById('formSession').value = '2025-2026';
+      }
       document.getElementById('formImagePreview').src = 'profile.png';
       selectedImageFile = null;
 
@@ -1554,6 +1608,9 @@
       document.getElementById('candidateId').value = cand.id;
       document.getElementById('formName').value = cand.name.replace(/^Engr\.\s*/i, '');
       document.getElementById('formBallotNo').value = cand.ballotNo || '';
+      if (document.getElementById('formSession')) {
+        document.getElementById('formSession').value = cand.session || '2025-2026';
+      }
       document.getElementById('formCandidateFor').value = cand.candidateFor || '';
       document.getElementById('formBatch').value = cand.batch || '';
       document.getElementById('formDepartment').value = cand.department || '';
@@ -1641,6 +1698,7 @@
       const dbPayload = {
         name: formattedName,
         ballot_no: document.getElementById('formBallotNo').value.trim(),
+        election_session: (document.getElementById('formSession') ? document.getElementById('formSession').value.trim() : '') || '2025-2026',
         candidate_for: document.getElementById('formCandidateFor').value.trim(),
         batch: document.getElementById('formBatch').value.trim(),
         department: document.getElementById('formDepartment').value,
@@ -1860,6 +1918,9 @@
       document.getElementById('detailImage').src = cand.imageUrl || 'profile.png';
       document.getElementById('detailBallotNo').textContent = cand.ballotNo || '--';
       document.getElementById('detailCandidateForBadge').textContent = cand.candidateFor || 'IEB Candidate';
+      if (document.getElementById('detailSessionText')) {
+        document.getElementById('detailSessionText').textContent = 'Session: ' + (cand.session || '2025-2026');
+      }
       document.getElementById('detailDivisionBadge').textContent = cand.division || 'All Divisions';
       document.getElementById('detailName').textContent = cand.name;
       document.getElementById('detailDept').textContent = cand.department || 'Engineering';
@@ -2266,9 +2327,10 @@
         return;
       }
 
-      const headers = ['Ballot No', 'Name', 'Candidate For', 'Department', 'IIUC Batch', 'IEB ID', 'Division', 'Phone', 'Email', 'Education', 'Experience'];
+      const headers = ['Ballot No', 'Election Session', 'Name', 'Candidate For', 'Department', 'IIUC Batch', 'IEB ID', 'Division', 'Phone', 'Email', 'Education', 'Experience'];
       const rows = liveOnly.map(c => [
         `"${(c.ballotNo || '').replace(/"/g, '""')}"`,
+        `"${(c.session || '2025-2026').replace(/"/g, '""')}"`,
         `"${(c.name || '').replace(/"/g, '""')}"`,
         `"${(c.candidateFor || '').replace(/"/g, '""')}"`,
         `"${(c.department || '').replace(/"/g, '""')}"`,
@@ -2309,6 +2371,7 @@
 
     function resetFilters() {
       document.getElementById('searchInput').value = '';
+      if (document.getElementById('filterSession')) document.getElementById('filterSession').value = '';
       document.getElementById('filterPost').value = '';
       document.getElementById('filterDepartment').value = '';
       document.getElementById('filterDivision').value = '';

@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.candidates (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     ballot_no TEXT NOT NULL,
+    election_session TEXT DEFAULT '2025-2026',
     candidate_for TEXT NOT NULL,
     division TEXT NOT NULL,
     department TEXT NOT NULL,
@@ -92,8 +93,12 @@ CREATE TABLE IF NOT EXISTS public.candidates (
 -- Indexing for fast search and filtering
 CREATE INDEX IF NOT EXISTS idx_candidates_status ON public.candidates(status);
 CREATE INDEX IF NOT EXISTS idx_candidates_ballot_no ON public.candidates(ballot_no);
+CREATE INDEX IF NOT EXISTS idx_candidates_session ON public.candidates(election_session);
 CREATE INDEX IF NOT EXISTS idx_candidates_department ON public.candidates(department);
 CREATE INDEX IF NOT EXISTS idx_candidates_division ON public.candidates(division);
+
+-- Migration query for existing databases:
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS election_session TEXT DEFAULT '2025-2026';
 
 -- 4. Row-Level Security (RLS) on Candidates
 ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
