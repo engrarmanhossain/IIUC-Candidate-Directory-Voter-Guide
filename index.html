@@ -641,7 +641,7 @@
           <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
             <div class="md:col-span-4 flex flex-col items-center justify-center bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
               <div class="relative w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden bg-slate-200 mb-3 group">
-                <img id="formImagePreview" src="profile.png" onerror="this.src='profile.png'" alt="Candidate preview" class="w-full h-full object-cover">
+                <img id="formImagePreview" src="profile-emoji.png" onerror="this.src='profile-emoji.png'" alt="Candidate preview" class="w-full h-full object-cover">
               </div>
 
               <label class="cursor-pointer px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
@@ -760,7 +760,6 @@
                   <input type="text" id="formMembershipId" required placeholder="e.g. M-28491 or F-12340" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
                 </div>
               </div>
-            </div>
             </div>
           </div>
         </div>
@@ -915,7 +914,7 @@
       <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 relative">
         <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5">
           <div class="relative shrink-0">
-            <img id="detailImage" src="profile.png" onerror="this.src='profile.png'" alt="Candidate" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl bg-slate-800">
+            <img id="detailImage" src="profile-emoji.png" onerror="this.src='profile-emoji.png'" alt="Candidate" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl bg-slate-800">
             <div class="absolute -bottom-2 -right-2 px-3 py-1 rounded-lg gold-gradient text-slate-950 font-black text-sm shadow-md border-2 border-white flex items-center gap-1">
               <span>#</span><span id="detailBallotNo">01</span>
             </div>
@@ -1055,6 +1054,14 @@
     const STORAGE_KEY_SUPABASE = "ieb_supabase_config";
     const STORAGE_KEY_ADMIN_AUTH = "ieb_iiuc_admin_user_session";
     const STORAGE_KEY_LOCAL_BACKUP = "ieb_candidates_backup";
+    const DEFAULT_AVATAR = "profile-emoji.png";
+
+    function getCandidateAvatar(url) {
+      if (!url || url === 'profile.png' || url.endsWith('/profile.png') || url === 'profile-emoji.png' || url.endsWith('/profile-emoji.png')) {
+        return DEFAULT_AVATAR;
+      }
+      return url;
+    }
 
     let supabaseClient = null;
     let candidates = [];
@@ -1234,7 +1241,7 @@
         department: c.department,
         batch: c.batch,
         membershipId: c.membership_id,
-        imageUrl: c.image_url || 'profile.png',
+        imageUrl: getCandidateAvatar(c.image_url),
         education: c.education,
         professional: c.professional,
         extraCurricular: c.extra_curricular,
@@ -1479,7 +1486,7 @@
             </div>
 
             <div class="flex items-center gap-3.5">
-              <img src="${escapeHtml(img)}" alt="${escapeHtml(cand.name)}" onerror="this.src='profile.png'" class="w-16 h-16 rounded-xl object-cover border-2 border-slate-100 shadow-md bg-slate-100">
+              <img src="${escapeHtml(getCandidateAvatar(cand.imageUrl))}" alt="${escapeHtml(cand.name)}" onerror="this.src='profile-emoji.png'" class="w-16 h-16 rounded-xl object-cover border-2 border-slate-100 shadow-md bg-slate-100">
               <div class="flex-1 min-w-0">
                 <h3 class="text-base font-bold text-slate-900 truncate group-hover:text-emerald-700 transition">
                   ${escapeHtml(cand.name)}
@@ -1523,7 +1530,7 @@
 
     function renderCandidateTableRow(cand) {
       const safeId = escapeHtml(cand.id);
-      const img = cand.imageUrl || 'profile.png';
+      const img = getCandidateAvatar(cand.imageUrl);
       const isPending = cand.status === 'pending';
       const hasDeletion = cand.deletionRequest != null;
 
@@ -1540,7 +1547,7 @@
           </td>
           <td class="px-4 py-3 whitespace-nowrap">
             <div class="flex items-center gap-2.5">
-              <img src="${escapeHtml(img)}" onerror="this.src='profile.png'" class="w-8 h-8 rounded-lg object-cover bg-slate-100 border">
+              <img src="${escapeHtml(img)}" onerror="this.src='profile-emoji.png'" class="w-8 h-8 rounded-lg object-cover bg-slate-100 border">
               <div>
                 <span class="font-bold text-slate-800 hover:text-emerald-700 cursor-pointer" onclick="openCandidateDetails('${safeId}')">
                   ${escapeHtml(cand.name)}
@@ -1582,7 +1589,8 @@
       if (document.getElementById('formSession')) {
         document.getElementById('formSession').value = '2025-2026';
       }
-      document.getElementById('formImagePreview').src = 'profile.png';
+      document.getElementById('formImagePreview').src = DEFAULT_AVATAR;
+      document.getElementById('formImageUrl').value = '';
       selectedImageFile = null;
 
       const modal = document.getElementById('candidateFormModal');
@@ -1626,9 +1634,9 @@
       document.getElementById('formEmail').value = cand.email || '';
       document.getElementById('formSocial').value = cand.social || '';
       
-      const img = cand.imageUrl || 'profile.png';
+      const img = getCandidateAvatar(cand.imageUrl);
       document.getElementById('formImagePreview').src = img;
-      document.getElementById('formImageUrl').value = cand.imageUrl && !cand.imageUrl.startsWith('data:') ? cand.imageUrl : '';
+      document.getElementById('formImageUrl').value = (img === DEFAULT_AVATAR || img.startsWith('data:')) ? '' : img;
       selectedImageFile = null;
 
       const modalTitle = document.getElementById('formModalTitle');
@@ -1661,6 +1669,8 @@
       if (url && url.trim().length > 0) {
         document.getElementById('formImagePreview').src = url.trim();
         selectedImageFile = null;
+      } else if (!selectedImageFile) {
+        document.getElementById('formImagePreview').src = DEFAULT_AVATAR;
       }
     }
 
@@ -1677,7 +1687,7 @@
       const formattedName = rawName.toLowerCase().startsWith('engr.') ? rawName : `Engr. ${rawName}`;
 
       const manualUrl = document.getElementById('formImageUrl').value.trim();
-      let finalImageUrl = manualUrl || 'profile.png';
+      let finalImageUrl = manualUrl || DEFAULT_AVATAR;
 
       if (supabaseClient && selectedImageFile) {
         try {
@@ -1921,7 +1931,7 @@
       const cand = candidates.find(c => c.id === id);
       if (!cand) return;
 
-      document.getElementById('detailImage').src = cand.imageUrl || 'profile.png';
+      document.getElementById('detailImage').src = getCandidateAvatar(cand.imageUrl);
       document.getElementById('detailBallotNo').textContent = cand.ballotNo || '--';
       document.getElementById('detailCandidateForBadge').textContent = cand.candidateFor || 'IEB Candidate';
       if (document.getElementById('detailSessionText')) {
