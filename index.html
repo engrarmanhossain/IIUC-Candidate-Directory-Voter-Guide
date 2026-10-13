@@ -68,6 +68,27 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="iiuc-logo.png">
+  <link rel="apple-touch-icon" href="iiuc-logo.png">
+
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; font-size: 11pt; }
+      .print-page-break { page-break-after: always; }
+      .candidate-card-print {
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+      }
+    }
+    
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
     .gold-gradient {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     }
@@ -119,12 +140,10 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-20">
         
-        <!-- Logo & Title -->
+        <!-- Official IIUC Logo & Title -->
         <div class="flex items-center space-x-3 sm:space-x-4">
-          <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 p-0.5 shadow-md flex items-center justify-center shrink-0">
-            <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
-              <i data-lucide="vote" class="w-6 h-6 text-emerald-400"></i>
-            </div>
+          <div class="w-12 h-12 sm:w-14 sm:h-14 p-1 bg-white/10 rounded-2xl border border-white/20 shadow-md flex items-center justify-center shrink-0 backdrop-blur-sm">
+            <img src="iiuc-logo.png" alt="IIUC Emblem" class="w-full h-full object-contain filter drop-shadow">
           </div>
           <div>
             <div class="flex items-center gap-2">
@@ -144,12 +163,6 @@
         <!-- Header Actions -->
         <div class="flex items-center space-x-2 sm:space-x-3">
           
-          <!-- Supabase Cloud Connection Status Badge -->
-          <button onclick="openSupabaseConfigModal()" id="supabaseStatusBtn" title="Supabase Cloud Connection" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-            <span id="supabaseStatusDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span id="supabaseStatusText" class="hidden sm:inline">Supabase</span>
-          </button>
-
           <!-- Print Guide Button -->
           <button onclick="window.print()" class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
             <i data-lucide="printer" class="w-4 h-4"></i>
@@ -193,6 +206,7 @@
 
   <!-- PRINT ONLY HEADER -->
   <div class="hidden print:block p-6 border-b-2 border-slate-800 text-center mb-6">
+    <img src="iiuc-logo.png" alt="IIUC Logo" class="w-16 h-16 mx-auto mb-2 object-contain">
     <h1 class="text-2xl font-bold uppercase text-slate-900 tracking-wider">Institution of Engineers, Bangladesh (IEB)</h1>
     <h2 class="text-lg font-semibold text-emerald-700">Official Candidate Directory — IIUC Engineers Panel / Alumni</h2>
     <p class="text-xs text-slate-500 mt-1">International Islamic University Chittagong • IEB Election</p>
@@ -1121,8 +1135,8 @@
       if (config && config.supabaseUrl && config.supabaseAnonKey && window.supabase) {
         try {
           supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-          statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-          statusText.textContent = 'Supabase Cloud Live';
+          if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+          if (statusText) statusText.textContent = 'Supabase Cloud Live';
 
           // Auth State Listener
           supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -1145,8 +1159,8 @@
         }
       }
 
-      statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
-      statusText.textContent = 'Supabase Setup';
+      if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+      if (statusText) statusText.textContent = 'Supabase Setup';
     }
 
     // Load Candidates
