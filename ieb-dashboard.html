@@ -545,8 +545,8 @@
   <!-- MODAL: MANAGE USER ROLES (ADMIN ONLY)                                     -->
   <!-- ========================================================================= -->
   <div id="usersManagementModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-      <div class="bg-gradient-to-r from-emerald-950 to-slate-900 p-5 text-white flex items-center justify-between">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      <div class="bg-gradient-to-r from-emerald-950 to-slate-900 p-5 text-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
             <i data-lucide="user-check" class="w-5 h-5"></i>
@@ -561,7 +561,7 @@
         </button>
       </div>
 
-      <div class="p-6 space-y-5">
+      <div class="p-6 space-y-5 overflow-y-auto flex-1">
         <!-- Add / Register Admin User Form -->
         <form onsubmit="handleAssignUserRole(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
           <div class="flex items-center justify-between">
@@ -652,9 +652,9 @@
   <!-- MODAL 2: ADD / EDIT CANDIDATE (SUBMISSION & APPROVAL WORKFLOW)            -->
   <!-- ========================================================================= -->
   <div id="candidateFormModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all my-8">
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all my-auto max-h-[92vh] flex flex-col">
       
-      <div class="bg-gradient-to-r from-emerald-900 to-slate-900 px-6 py-4 text-white flex items-center justify-between border-b border-emerald-500/20">
+      <div class="bg-gradient-to-r from-emerald-900 to-slate-900 px-6 py-4 text-white flex items-center justify-between border-b border-emerald-500/20 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300">
             <i id="formModalIcon" data-lucide="user-plus" class="w-5 h-5"></i>
@@ -669,12 +669,12 @@
         </button>
       </div>
 
-      <div id="formWorkflowAlert" class="bg-amber-50 px-6 py-2.5 border-b border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+      <div id="formWorkflowAlert" class="bg-amber-50 px-6 py-2.5 border-b border-amber-200 text-xs text-amber-900 flex items-center gap-2 shrink-0">
         <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
         <span>Public submission notice: Once submitted, your candidate entry will be reviewed by an administrator before appearing on the public directory.</span>
       </div>
 
-      <form id="candidateForm" onsubmit="handleSaveCandidate(event)" class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+      <form id="candidateForm" onsubmit="handleSaveCandidate(event)" class="p-6 space-y-6 overflow-y-auto flex-1">
         <input type="hidden" id="candidateId">
 
         <!-- SECTION 1: PHOTO & BASIC IDENTITY -->
@@ -927,34 +927,36 @@
   <!-- MODAL 4: CANDIDATE DETAILS VIEW                                            -->
   <!-- ========================================================================= -->
   <div id="candidateDetailsModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all my-8 relative">
-      <button onclick="closeDetailsModal()" class="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all my-auto max-h-[92vh] flex flex-col relative">
+      <!-- Fixed Modal Header with Candidate Identity -->
+      <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-4 sm:p-5 shrink-0 relative border-b border-emerald-500/20">
+        <!-- Close Button (always accessible) -->
+        <button onclick="closeDetailsModal()" class="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition shadow-sm" title="Close">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
 
-      <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 relative">
-        <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+        <div class="flex flex-row items-center sm:items-start gap-4 sm:gap-5 pr-8 sm:pr-10">
           <div class="relative shrink-0">
-            <img id="detailImage" src="profile-emoji.png" onerror="this.src='profile-emoji.png'" alt="Candidate" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white/20 shadow-xl bg-slate-800">
-            <div class="absolute -bottom-2 -right-2 px-3 py-1 rounded-lg gold-gradient text-slate-950 font-black text-sm shadow-md border-2 border-white flex items-center gap-1">
+            <img id="detailImage" src="profile-emoji.png" onerror="this.src='profile-emoji.png'" alt="Candidate" class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 sm:border-3 border-white/20 shadow-xl bg-slate-800">
+            <div class="absolute -bottom-1 -right-1 sm:-bottom-1.5 sm:-right-1.5 px-2 py-0.5 rounded-lg gold-gradient text-slate-950 font-black text-xs sm:text-sm shadow-md border border-white flex items-center gap-0.5">
               <span>#</span><span id="detailBallotNo">01</span>
             </div>
           </div>
 
-          <div class="text-center sm:text-left flex-1">
-            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
-              <span id="detailCandidateForBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-900 shadow-sm">Candidate Post</span>
-              <span id="detailSessionBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-emerald-200 border border-emerald-400/30 flex items-center gap-1">
+          <div class="text-left flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-1.5 mb-1">
+              <span id="detailCandidateForBadge" class="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-amber-400 text-slate-900 shadow-sm truncate max-w-full">Candidate Post</span>
+              <span id="detailSessionBadge" class="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-white/10 text-emerald-200 border border-emerald-400/30 flex items-center gap-1">
                 <i data-lucide="calendar" class="w-3 h-3 text-emerald-300"></i>
                 <span id="detailSessionText">Session: 2025-2026</span>
               </span>
-              <span id="detailDivisionBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Division / Center</span>
-              <span id="detailStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[11px] font-bold"></span>
+              <span id="detailDivisionBadge" class="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate">Division / Center</span>
+              <span id="detailStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold"></span>
             </div>
 
-            <h2 id="detailName" class="text-2xl sm:text-3xl font-bold font-display tracking-tight text-white">Engr. Name</h2>
+            <h2 id="detailName" class="text-xl sm:text-2xl font-bold font-display tracking-tight text-white truncate">Engr. Name</h2>
 
-            <div class="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-xs text-slate-300">
+            <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300">
               <span class="flex items-center gap-1">
                 <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-emerald-400"></i>
                 IIUC <span id="detailDept" class="font-semibold text-white">EEE</span> • <span id="detailBatch">Batch 18</span>
@@ -964,36 +966,45 @@
                 IEB ID: <span id="detailMembershipId" class="font-bold text-amber-300">M-28491</span>
               </span>
             </div>
-
-            <p id="detailManifesto" class="text-xs text-emerald-100/90 italic mt-3 bg-white/5 p-2.5 rounded-lg border border-white/10">
-              "Committed to serving the engineer community."
-            </p>
           </div>
         </div>
       </div>
 
-      <div class="p-6 space-y-6 max-h-[60vh] overflow-y-auto bg-slate-50/50">
+      <!-- Scrollable Details Body -->
+      <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 bg-slate-50/50">
+        <!-- ELECTION MANIFESTO & VISION -->
+        <div id="detailManifestoCard" class="bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 p-4 rounded-xl border border-emerald-200/80 shadow-sm">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-2 mb-2">
+            <i data-lucide="quote" class="w-4 h-4 text-emerald-600"></i> Election Manifesto & Vision
+          </h4>
+          <p id="detailManifesto" class="text-xs text-slate-800 whitespace-pre-line leading-relaxed pl-3.5 border-l-2 border-emerald-500 italic"></p>
+        </div>
+
+        <!-- EDUCATIONAL QUALIFICATIONS -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-2 mb-2">
             <i data-lucide="book-open" class="w-4 h-4"></i> Educational Qualifications
           </h4>
-          <div id="detailEducation" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-emerald-500"></div>
+          <div id="detailEducation" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-4 border-l-2 border-emerald-500"></div>
         </div>
 
+        <!-- PROFESSIONAL QUALIFICATIONS & EXPERIENCE -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <h4 class="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2 mb-2">
             <i data-lucide="briefcase" class="w-4 h-4"></i> Professional Qualifications & Experience
           </h4>
-          <div id="detailProfessional" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-blue-500"></div>
+          <div id="detailProfessional" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-4 border-l-2 border-blue-500"></div>
         </div>
 
+        <!-- EXTRA-CURRICULAR, SOCIAL & LEADERSHIP -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <h4 class="text-xs font-bold uppercase tracking-wider text-purple-700 flex items-center gap-2 mb-2">
             <i data-lucide="award" class="w-4 h-4"></i> Extra-Curricular, Social & Leadership
           </h4>
-          <div id="detailExtraCurricular" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-6 border-l-2 border-purple-500"></div>
+          <div id="detailExtraCurricular" class="text-xs text-slate-700 whitespace-pre-line leading-relaxed pl-4 border-l-2 border-purple-500"></div>
         </div>
 
+        <!-- CONTACT & SOCIAL -->
         <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-4">
           <div class="space-y-1">
             <p class="text-xs font-bold text-slate-700">Contact & Coordination</p>
@@ -1012,7 +1023,8 @@
         </div>
       </div>
 
-      <div class="px-6 py-4 bg-white border-t border-slate-200 flex items-center justify-between">
+      <!-- Pinned Footer with Actions -->
+      <div class="px-5 sm:px-6 py-3.5 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
         <div class="text-xs text-slate-400">
           <span id="detailSubmitterNote">Verified IIUC Entry</span>
         </div>
@@ -1974,11 +1986,12 @@
       }
 
       const manifestoEl = document.getElementById('detailManifesto');
-      if (cand.manifesto) {
-        manifestoEl.textContent = `“${cand.manifesto}”`;
-        manifestoEl.classList.remove('hidden');
+      const manifestoCard = document.getElementById('detailManifestoCard');
+      if (cand.manifesto && cand.manifesto.trim()) {
+        manifestoEl.textContent = cand.manifesto.trim();
+        if (manifestoCard) manifestoCard.classList.remove('hidden');
       } else {
-        manifestoEl.classList.add('hidden');
+        if (manifestoCard) manifestoCard.classList.add('hidden');
       }
 
       document.getElementById('detailEducation').textContent = cand.education || 'No educational details listed.';
@@ -2034,6 +2047,8 @@
       }
 
       document.getElementById('candidateDetailsModal').classList.remove('hidden');
+      const detailsBody = document.querySelector('#candidateDetailsModal .overflow-y-auto.flex-1');
+      if (detailsBody) detailsBody.scrollTop = 0;
       lucide.createIcons();
     }
 
