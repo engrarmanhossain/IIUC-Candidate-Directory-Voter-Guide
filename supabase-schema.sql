@@ -230,3 +230,23 @@ BEFORE INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION public.auto_confirm_new_users();
 
+-- =========================================================================
+-- 9. KEEP-ALIVE HEARTBEAT (PREVENTS SUPABASE FREE-TIER PAUSING)
+-- =========================================================================
+-- Lightweight RPC function that executes real DB activity when pinged:
+CREATE OR REPLACE FUNCTION public.keep_alive_ping()
+RETURNS json
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT json_build_object(
+    'status', 'alive',
+    'app', 'IIUC Candidate Directory & Voter Guide',
+    'timestamp', now()
+  );
+$$;
+
+-- Grant execution permissions to anon and authenticated callers:
+GRANT EXECUTE ON FUNCTION public.keep_alive_ping() TO anon, authenticated;
+
+
