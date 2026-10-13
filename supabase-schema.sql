@@ -203,3 +203,27 @@ INSERT INTO public.candidates (
     'Promoting gender equity in engineering leadership, continuous career training, and industrial internships for young engineering graduates.',
     '+880 1912-334455', 'engr.nargis.eee@example.com', 'https://linkedin.com/in/nargis-sultana-eee', 'approved'
 );
+
+-- =========================================================================
+-- 8. AUTO-CONFIRM USERS (FIXES "EMAIL NOT CONFIRMED" ERROR)
+-- =========================================================================
+-- Run this one-time command to immediately confirm all existing unconfirmed users:
+UPDATE auth.users 
+SET email_confirmed_at = now() 
+WHERE email_confirmed_at IS NULL;
+
+-- Automatically confirm email for all future registered users:
+CREATE OR REPLACE FUNCTION public.auto_confirm_new_users()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.email_confirmed_at = COALESCE(NEW.email_confirmed_at, now());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_auto_confirm_users ON auth.users;
+CREATE TRIGGER trigger_auto_confirm_users
+BEFORE INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION public.auto_confirm_new_users();
+

@@ -535,6 +535,8 @@
             Or send Magic Login Link to your Email
           </button>
         </div>
+
+        <div id="adminLoginNotice"></div>
       </form>
     </div>
   </div>
@@ -2045,6 +2047,8 @@
     function openAdminLoginModal() {
       document.getElementById('adminLoginEmail').value = '';
       document.getElementById('adminLoginPassword').value = '';
+      const notice = document.getElementById('adminLoginNotice');
+      if (notice) notice.innerHTML = '';
       document.getElementById('adminLoginModal').classList.remove('hidden');
       lucide.createIcons();
     }
@@ -2060,6 +2064,9 @@
 
       const submitBtn = document.getElementById('adminLoginSubmitBtn');
       const submitText = document.getElementById('adminLoginSubmitText');
+      const notice = document.getElementById('adminLoginNotice');
+      if (notice) notice.innerHTML = '';
+
       submitBtn.disabled = true;
       submitText.textContent = "Verifying...";
 
@@ -2074,6 +2081,36 @@
           if (authError) {
             submitBtn.disabled = false;
             submitText.textContent = "Sign In as Admin";
+
+            const msg = (authError.message || '').toLowerCase();
+            if (msg.includes('not confirmed') || msg.includes('unconfirmed')) {
+              showToast('Email not confirmed in Supabase. Sending Magic Link...', 'info');
+              try {
+                await supabaseClient.auth.signInWithOtp({
+                  email: email,
+                  options: { emailRedirectTo: window.location.origin }
+                });
+              } catch (otpErr) {
+                console.warn('OTP dispatch error:', otpErr);
+              }
+              if (notice) {
+                notice.innerHTML = `
+                  <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs space-y-1.5 text-left">
+                    <p class="font-bold flex items-center gap-1.5 text-amber-800">
+                      <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i> Supabase Email Confirmation Required
+                    </p>
+                    <p>Supabase requires email confirmation for this user. A <strong>1-click Magic Login Link</strong> was dispatched to <strong>${escapeHtml(email)}</strong>.</p>
+                    <p>Check your inbox and click the link to confirm and log in instantly.</p>
+                    <div class="pt-1 border-t border-amber-200/80 text-[11px] text-amber-800">
+                      💡 <strong>To disable confirmation:</strong> In Supabase Dashboard &rarr; <em>Authentication &rarr; Providers &rarr; Email</em>, toggle <strong>OFF</strong> <em>"Confirm email"</em>.
+                    </div>
+                  </div>
+                `;
+                lucide.createIcons();
+              }
+              return;
+            }
+
             showToast('Authentication failed: ' + authError.message, 'error');
             return;
           }
