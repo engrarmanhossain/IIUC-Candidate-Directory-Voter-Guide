@@ -1279,10 +1279,17 @@
     function normalizeCandidateRecord(c) {
       let centerVal = c.center || '';
       let divVal = c.division || '';
-      // Backward compatibility: If center is blank but division contained center or council
-      if (!centerVal && divVal && (divVal.toLowerCase().includes('center') || divVal.toLowerCase().includes('council'))) {
-        centerVal = divVal;
-        divVal = '';
+
+      // Backward compatibility: If center is blank, check if division has "(Center Name)" or "Chattogram Center"
+      if (!centerVal && divVal) {
+        const match = divVal.match(/^(.*?)\s*\((.*?center.*?)\)$/i) || divVal.match(/^(.*?)\s*\((.*?council.*?)\)$/i);
+        if (match) {
+          divVal = match[1].trim();
+          centerVal = match[2].trim();
+        } else if (divVal.toLowerCase().includes('center') || divVal.toLowerCase().includes('council')) {
+          centerVal = divVal;
+          divVal = '';
+        }
       }
 
       return {
@@ -1823,15 +1830,34 @@
 
       if (supabaseClient) {
         try {
+          let resError = null;
           if (id) {
             const { error } = await supabaseClient.from('candidates').update(dbPayload).eq('id', id);
-            if (error) throw error;
-            showToast(isAdminLoggedIn ? 'Candidate updated!' : 'Update submitted for approval!', 'success');
+            resError = error;
           } else {
             const { error } = await supabaseClient.from('candidates').insert([dbPayload]);
-            if (error) throw error;
-            showToast(isAdminLoggedIn ? 'Candidate published directly!' : `Submitted! Awaiting admin approval.`, 'success');
+            resError = error;
           }
+
+          // Auto-fallback if 'center' column is not yet present in Supabase table / schema cache
+          if (resError && (resError.message.includes("'center'") || resError.message.includes("schema cache"))) {
+            console.warn("Notice: 'center' column not in Supabase schema cache. Retrying with legacy payload...");
+            const centerVal = dbPayload.center;
+            delete dbPayload.center;
+            if (centerVal) {
+              dbPayload.division = dbPayload.division ? `${dbPayload.division} (${centerVal})` : centerVal;
+            }
+            if (id) {
+              const { error: retryErr } = await supabaseClient.from('candidates').update(dbPayload).eq('id', id);
+              resError = retryErr;
+            } else {
+              const { error: retryErr } = await supabaseClient.from('candidates').insert([dbPayload]);
+              resError = retryErr;
+            }
+          }
+
+          if (resError) throw resError;
+          showToast(isAdminLoggedIn ? (id ? 'Candidate updated!' : 'Candidate published directly!') : `Submitted! Awaiting admin approval.`, 'success');
         } catch (err) {
           showToast(`Database error: ${err.message}`, 'error');
         }
