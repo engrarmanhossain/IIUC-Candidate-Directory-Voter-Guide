@@ -65,7 +65,8 @@ CREATE TABLE IF NOT EXISTS public.candidates (
     ballot_no TEXT NOT NULL,
     election_session TEXT DEFAULT '2025-2026',
     candidate_for TEXT NOT NULL,
-    division TEXT NOT NULL,
+    center TEXT DEFAULT '',
+    division TEXT DEFAULT '',
     department TEXT NOT NULL,
     batch TEXT NOT NULL,
     membership_id TEXT NOT NULL,
@@ -95,10 +96,12 @@ CREATE INDEX IF NOT EXISTS idx_candidates_status ON public.candidates(status);
 CREATE INDEX IF NOT EXISTS idx_candidates_ballot_no ON public.candidates(ballot_no);
 CREATE INDEX IF NOT EXISTS idx_candidates_session ON public.candidates(election_session);
 CREATE INDEX IF NOT EXISTS idx_candidates_department ON public.candidates(department);
+CREATE INDEX IF NOT EXISTS idx_candidates_center ON public.candidates(center);
 CREATE INDEX IF NOT EXISTS idx_candidates_division ON public.candidates(division);
 
 -- Migration query for existing databases:
 ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS election_session TEXT DEFAULT '2025-2026';
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS center TEXT DEFAULT '';
 
 -- 4. Row-Level Security (RLS) on Candidates
 ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
@@ -164,11 +167,11 @@ WITH CHECK (bucket_id = 'candidate-photos');
 
 -- 7. Initial Seed Candidates
 INSERT INTO public.candidates (
-    name, ballot_no, candidate_for, division, department, batch, membership_id,
+    name, ballot_no, candidate_for, center, division, department, batch, membership_id,
     image_url, education, professional, extra_curricular, manifesto, phone, email, social, status
 ) VALUES 
 (
-    'Engr. Arman Hossain', '07', 'Center Vice-Chairman (Academic & HRD)', 'Chattogram Center', 'EEE', '18th Batch (Autumn 2008)', 'M-28491',
+    'Engr. Arman Hossain', '07', 'Center Vice-Chairman (Academic & HRD)', 'Chattogram Center', 'Electrical Engineering Division', 'EEE', '18th Batch (Autumn 2008)', 'M-28491',
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
     '• B.Sc. in Electrical and Electronic Engineering (EEE), IIUC\n• M.Sc. in Renewable Energy & Power Systems\n• HSC (Science), Chittagong College',
     '• Lead Electrical & Automation Systems Engineer\n• 10+ years professional industrial & engineering research experience\n• Certified in High Voltage Power Grid and Industrial IoT',
@@ -177,7 +180,7 @@ INSERT INTO public.candidates (
     '+880 1819-234567', 'armanhossain.eee.info@gmail.com', 'https://linkedin.com/in/armanhossain', 'approved'
 ),
 (
-    'Engr. Tanvir Ahmed Chowdhury', '03', 'Honorary Center Secretary', 'Chattogram Center', 'CSE', '14th Batch (Spring 2006)', 'F-14280',
+    'Engr. Tanvir Ahmed Chowdhury', '03', 'Honorary Center Secretary', 'Chattogram Center', 'Computer Engineering Division', 'CSE', '14th Batch (Spring 2006)', 'F-14280',
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
     '• B.Sc. in Computer Science & Engineering (CSE), IIUC\n• Executive MBA in Project Management, IBA\n• CISSP Certified',
     '• Chief Technology Officer (CTO) at Premier Software Solutions\n• 15+ years experience in large-scale government digitization projects',
@@ -186,7 +189,7 @@ INSERT INTO public.candidates (
     '+880 1711-987654', 'engr.tanvir.cse@example.com', 'https://linkedin.com/in/tanvir-ahmed', 'approved'
 ),
 (
-    'Engr. Kazi Mahfuzur Rahman', '12', 'Central Council Member (General)', 'Central Council', 'CE', '10th Batch (Spring 2004)', 'F-09852',
+    'Engr. Kazi Mahfuzur Rahman', '12', 'Central Council Member (General)', 'Central Council / HQ', 'Civil Engineering Division', 'CE', '10th Batch (Spring 2004)', 'F-09852',
     'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
     '• B.Sc. in Civil Engineering, IIUC\n• M.Sc. in Structural Engineering, BUET\n• Professional Engineer (P.Eng.)',
     '• Superintending Engineer, Roads & Highways Department (RHD)\n• Supervised multiple flyover and bridge megaprojects in Chittagong division',
@@ -195,7 +198,7 @@ INSERT INTO public.candidates (
     '+880 1817-554433', 'engr.mahfuz.ce@example.com', 'https://linkedin.com/in/mahfuz-rahman-pe', 'approved'
 ),
 (
-    'Engr. Nargis Sultana', '08', 'Division Vice-Chairman (Electrical)', 'Electrical Engineering Division', 'EEE', '21st Batch (Autumn 2010)', 'M-31204',
+    'Engr. Nargis Sultana', '08', 'Division Vice-Chairman (Electrical)', 'Dhaka Center', 'Electrical Engineering Division', 'EEE', '21st Batch (Autumn 2010)', 'M-31204',
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
     '• B.Sc. in EEE, IIUC (Summa Cum Laude)\n• M.S. in Smart Grid Technologies, Kingston University UK',
     '• Deputy Director (Planning), Power Development Board (BPDB)\n• 9+ years in high-voltage power transmission network expansion',

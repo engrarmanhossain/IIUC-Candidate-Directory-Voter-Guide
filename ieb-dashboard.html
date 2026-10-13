@@ -362,7 +362,7 @@
       </div>
 
       <!-- FILTER DROPDOWNS -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 pt-2 border-t border-slate-100 text-xs">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-2 border-t border-slate-100 text-xs">
         <div>
           <label class="block font-semibold text-slate-500 mb-1">Election Session</label>
           <select id="filterSession" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500 font-medium">
@@ -385,7 +385,14 @@
         </div>
 
         <div>
-          <label class="block font-semibold text-slate-500 mb-1">Division / Center</label>
+          <label class="block font-semibold text-slate-500 mb-1">Center</label>
+          <select id="filterCenter" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500">
+            <option value="">All Centers</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-500 mb-1">Division</label>
           <select id="filterDivision" onchange="handleSearchFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:border-emerald-500">
             <option value="">All Divisions</option>
           </select>
@@ -745,12 +752,40 @@
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Candidate For (Post) <span class="text-rose-500">*</span></label>
-                <input type="text" id="formCandidateFor" required placeholder="Enter candidate post / position" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
+                <input type="text" id="formCandidateFor" required placeholder="Enter candidate post / position" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
               </div>
 
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Division / Center <span class="text-rose-500">*</span></label>
-                <input type="text" id="formDivision" required placeholder="Enter division or center" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800">
+                <label class="block text-xs font-bold text-slate-700 mb-1">Center <span class="text-rose-500">*</span></label>
+                <input type="text" id="formCenter" list="centerSuggestions" required placeholder="Enter center (e.g. Chattogram Center, Dhaka Center)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <datalist id="centerSuggestions">
+                  <option value="Chattogram Center">
+                  <option value="Dhaka Center">
+                  <option value="Central Council / HQ">
+                  <option value="Khulna Center">
+                  <option value="Rajshahi Center">
+                  <option value="Sylhet Center">
+                  <option value="Barishal Center">
+                  <option value="Rangpur Center">
+                  <option value="Mymensingh Center">
+                  <option value="Cumilla Center">
+                  <option value="Gazipur Center">
+                </datalist>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Division <span class="text-rose-500">*</span></label>
+                <input type="text" id="formDivision" list="divisionSuggestions" required placeholder="Enter division (e.g. Electrical Engineering Division)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <datalist id="divisionSuggestions">
+                  <option value="Electrical Engineering Division">
+                  <option value="Civil Engineering Division">
+                  <option value="Computer Engineering Division">
+                  <option value="Mechanical Engineering Division">
+                  <option value="Chemical Engineering Division">
+                  <option value="Agricultural Engineering Division">
+                  <option value="Textile Engineering Division">
+                  <option value="Central Council / General">
+                </datalist>
               </div>
 
               <div>
@@ -950,7 +985,8 @@
                 <i data-lucide="calendar" class="w-3 h-3 text-emerald-300"></i>
                 <span id="detailSessionText">Session: 2025-2026</span>
               </span>
-              <span id="detailDivisionBadge" class="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate">Division / Center</span>
+              <span id="detailCenterBadge" class="hidden px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30 truncate">Center</span>
+              <span id="detailDivisionBadge" class="hidden px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 truncate">Division</span>
               <span id="detailStatusBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold"></span>
             </div>
 
@@ -1264,13 +1300,22 @@
     }
 
     function normalizeCandidateRecord(c) {
+      let centerVal = c.center || '';
+      let divVal = c.division || '';
+      // Backward compatibility: If center is blank but division contained center or council
+      if (!centerVal && divVal && (divVal.toLowerCase().includes('center') || divVal.toLowerCase().includes('council'))) {
+        centerVal = divVal;
+        divVal = '';
+      }
+
       return {
         id: c.id,
         name: c.name,
         ballotNo: c.ballot_no,
         session: c.election_session || c.session || '2025-2026',
         candidateFor: c.candidate_for,
-        division: c.division,
+        center: centerVal,
+        division: divVal,
         department: c.department,
         batch: c.batch,
         membershipId: c.membership_id,
@@ -1312,7 +1357,7 @@
       const uniqueDepts = new Set(candidates.filter(c => c.status === 'approved').map(c => c.department)).size;
       document.getElementById('statDepartments').textContent = uniqueDepts;
 
-      const uniqueDivs = new Set(candidates.filter(c => c.status === 'approved').map(c => c.division)).size;
+      const uniqueDivs = new Set(candidates.filter(c => c.status === 'approved').map(c => c.division || c.center).filter(Boolean)).size;
       document.getElementById('statDivisions').textContent = uniqueDivs;
     }
 
@@ -1320,16 +1365,19 @@
       const sessionSelect = document.getElementById('filterSession');
       const postSelect = document.getElementById('filterPost');
       const deptSelect = document.getElementById('filterDepartment');
+      const centerSelect = document.getElementById('filterCenter');
       const divSelect = document.getElementById('filterDivision');
 
       const currentSession = sessionSelect ? sessionSelect.value : '';
-      const currentPost = postSelect.value;
-      const currentDept = deptSelect.value;
-      const currentDiv = divSelect.value;
+      const currentPost = postSelect ? postSelect.value : '';
+      const currentDept = deptSelect ? deptSelect.value : '';
+      const currentCenter = centerSelect ? centerSelect.value : '';
+      const currentDiv = divSelect ? divSelect.value : '';
 
       const sessions = Array.from(new Set(candidates.map(c => c.session || '2025-2026').filter(Boolean))).sort().reverse();
       const posts = Array.from(new Set(candidates.map(c => c.candidateFor).filter(Boolean))).sort();
       const depts = Array.from(new Set(candidates.map(c => c.department).filter(Boolean))).sort();
+      const centers = Array.from(new Set(candidates.map(c => c.center).filter(Boolean))).sort();
       const divs = Array.from(new Set(candidates.map(c => c.division).filter(Boolean))).sort();
 
       if (sessionSelect) {
@@ -1337,22 +1385,34 @@
           sessions.map(s => `<option value="${escapeHtml(s)}" ${s === currentSession ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
       }
 
-      postSelect.innerHTML = '<option value="">All Positions</option>' + 
-        posts.map(p => `<option value="${escapeHtml(p)}" ${p === currentPost ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
+      if (postSelect) {
+        postSelect.innerHTML = '<option value="">All Positions</option>' + 
+          posts.map(p => `<option value="${escapeHtml(p)}" ${p === currentPost ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
+      }
 
-      deptSelect.innerHTML = '<option value="">All Departments</option>' + 
-        depts.map(d => `<option value="${escapeHtml(d)}" ${d === currentDept ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
+      if (deptSelect) {
+        deptSelect.innerHTML = '<option value="">All Departments</option>' + 
+          depts.map(d => `<option value="${escapeHtml(d)}" ${d === currentDept ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
+      }
 
-      divSelect.innerHTML = '<option value="">All Divisions</option>' + 
-        divs.map(d => `<option value="${escapeHtml(d)}" ${d === currentDiv ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
+      if (centerSelect) {
+        centerSelect.innerHTML = '<option value="">All Centers</option>' + 
+          centers.map(c => `<option value="${escapeHtml(c)}" ${c === currentCenter ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+      }
+
+      if (divSelect) {
+        divSelect.innerHTML = '<option value="">All Divisions</option>' + 
+          divs.map(d => `<option value="${escapeHtml(d)}" ${d === currentDiv ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
+      }
     }
 
     function handleSearchFilter() {
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
       const session = document.getElementById('filterSession') ? document.getElementById('filterSession').value : '';
-      const post = document.getElementById('filterPost').value;
-      const dept = document.getElementById('filterDepartment').value;
-      const division = document.getElementById('filterDivision').value;
+      const post = document.getElementById('filterPost') ? document.getElementById('filterPost').value : '';
+      const dept = document.getElementById('filterDepartment') ? document.getElementById('filterDepartment').value : '';
+      const center = document.getElementById('filterCenter') ? document.getElementById('filterCenter').value : '';
+      const division = document.getElementById('filterDivision') ? document.getElementById('filterDivision').value : '';
       const sortBy = document.getElementById('sortBy').value;
 
       const clearBtn = document.getElementById('clearSearchBtn');
@@ -1375,7 +1435,7 @@
         if (search) {
           const matchTarget = [
             cand.name, cand.ballotNo, cand.session, cand.membershipId, cand.batch,
-            cand.department, cand.candidateFor, cand.division,
+            cand.department, cand.candidateFor, cand.center, cand.division,
             cand.professional, cand.education
           ].join(' ').toLowerCase();
           if (!matchTarget.includes(search)) return false;
@@ -1384,6 +1444,7 @@
         if (session && (cand.session || '2025-2026') !== session) return false;
         if (post && cand.candidateFor !== post) return false;
         if (dept && cand.department !== dept) return false;
+        if (center && cand.center !== center) return false;
         if (division && cand.division !== division) return false;
 
         return true;
@@ -1400,7 +1461,7 @@
       });
 
       document.getElementById('filteredCount').textContent = filtered.length;
-      const hasActive = Boolean(search || session || post || dept || division);
+      const hasActive = Boolean(search || session || post || dept || center || division);
       const activeBadge = document.getElementById('activeFilterBadge');
       if (hasActive) activeBadge.classList.remove('hidden');
       else activeBadge.classList.add('hidden');
@@ -1530,6 +1591,12 @@
                   </span>
                   <span>• ${escapeHtml(cand.batch || 'Alumni')}</span>
                 </div>
+                ${(cand.center || cand.division) ? `
+                  <div class="mt-1 text-[11px] text-slate-500 truncate flex items-center gap-1">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-emerald-600 shrink-0"></i>
+                    <span>${escapeHtml(cand.center || '')}${cand.center && cand.division ? ' • ' : ''}${escapeHtml(cand.division || '')}</span>
+                  </div>
+                ` : ''}
                 <div class="mt-1 font-mono text-[11px] text-slate-600">
                   IEB ID: <strong class="text-slate-800">${escapeHtml(cand.membershipId || 'N/A')}</strong>
                 </div>
@@ -1585,7 +1652,9 @@
                 <span class="font-bold text-slate-800 hover:text-emerald-700 cursor-pointer" onclick="openCandidateDetails('${safeId}')">
                   ${escapeHtml(cand.name)}
                 </span>
-                <span class="block text-[11px] text-slate-400">${escapeHtml(cand.division || '')}</span>
+                <span class="block text-[11px] text-slate-400">
+                  ${escapeHtml(cand.center || '')}${cand.center && cand.division ? ' • ' : ''}${escapeHtml(cand.division || '')}
+                </span>
               </div>
             </div>
           </td>
@@ -1656,6 +1725,9 @@
       document.getElementById('formBatch').value = cand.batch || '';
       document.getElementById('formDepartment').value = cand.department || '';
       document.getElementById('formMembershipId').value = cand.membershipId || '';
+      if (document.getElementById('formCenter')) {
+        document.getElementById('formCenter').value = cand.center || '';
+      }
       document.getElementById('formDivision').value = cand.division || '';
       
       document.getElementById('formEducation').value = cand.education || '';
@@ -1752,6 +1824,7 @@
         batch: document.getElementById('formBatch').value.trim(),
         department: document.getElementById('formDepartment').value,
         membership_id: document.getElementById('formMembershipId').value.trim(),
+        center: (document.getElementById('formCenter') ? document.getElementById('formCenter').value.trim() : ''),
         division: document.getElementById('formDivision').value.trim(),
         education: document.getElementById('formEducation').value.trim(),
         professional: document.getElementById('formProfessional').value.trim(),
@@ -1970,7 +2043,26 @@
       if (document.getElementById('detailSessionText')) {
         document.getElementById('detailSessionText').textContent = 'Session: ' + (cand.session || '2025-2026');
       }
-      document.getElementById('detailDivisionBadge').textContent = cand.division || 'All Divisions';
+
+      const centerBadge = document.getElementById('detailCenterBadge');
+      if (centerBadge) {
+        if (cand.center) {
+          centerBadge.textContent = cand.center;
+          centerBadge.classList.remove('hidden');
+        } else {
+          centerBadge.classList.add('hidden');
+        }
+      }
+
+      const divBadge = document.getElementById('detailDivisionBadge');
+      if (divBadge) {
+        if (cand.division) {
+          divBadge.textContent = cand.division;
+          divBadge.classList.remove('hidden');
+        } else {
+          divBadge.classList.add('hidden');
+        }
+      }
       document.getElementById('detailName').textContent = cand.name;
       document.getElementById('detailDept').textContent = cand.department || 'Engineering';
       document.getElementById('detailBatch').textContent = cand.batch || 'Alumni';
@@ -2510,7 +2602,7 @@
         return;
       }
 
-      const headers = ['Ballot No', 'Election Session', 'Name', 'Candidate For', 'Department', 'IIUC Batch', 'IEB ID', 'Division', 'Phone', 'Email', 'Education', 'Experience'];
+      const headers = ['Ballot No', 'Election Session', 'Name', 'Candidate For', 'Department', 'IIUC Batch', 'IEB ID', 'Center', 'Division', 'Phone', 'Email', 'Education', 'Experience'];
       const rows = liveOnly.map(c => [
         `"${(c.ballotNo || '').replace(/"/g, '""')}"`,
         `"${(c.session || '2025-2026').replace(/"/g, '""')}"`,
@@ -2519,6 +2611,7 @@
         `"${(c.department || '').replace(/"/g, '""')}"`,
         `"${(c.batch || '').replace(/"/g, '""')}"`,
         `"${(c.membershipId || '').replace(/"/g, '""')}"`,
+        `"${(c.center || '').replace(/"/g, '""')}"`,
         `"${(c.division || '').replace(/"/g, '""')}"`,
         `"${(c.phone || '').replace(/"/g, '""')}"`,
         `"${(c.email || '').replace(/"/g, '""')}"`,
@@ -2555,9 +2648,10 @@
     function resetFilters() {
       document.getElementById('searchInput').value = '';
       if (document.getElementById('filterSession')) document.getElementById('filterSession').value = '';
-      document.getElementById('filterPost').value = '';
-      document.getElementById('filterDepartment').value = '';
-      document.getElementById('filterDivision').value = '';
+      if (document.getElementById('filterPost')) document.getElementById('filterPost').value = '';
+      if (document.getElementById('filterDepartment')) document.getElementById('filterDepartment').value = '';
+      if (document.getElementById('filterCenter')) document.getElementById('filterCenter').value = '';
+      if (document.getElementById('filterDivision')) document.getElementById('filterDivision').value = '';
       document.getElementById('sortBy').value = 'ballot_asc';
       handleSearchFilter();
       showToast('Filters cleared', 'info');
