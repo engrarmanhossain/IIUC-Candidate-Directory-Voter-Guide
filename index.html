@@ -1991,35 +1991,48 @@
     async function verifyAndSetUserRole(email) {
       if (!supabaseClient) return;
 
+      const cleanEmail = (email || '').trim().toLowerCase();
+      let userProfile = null;
+
       try {
-        const { data: userProfile, error } = await supabaseClient
+        const { data, error } = await supabaseClient
           .from('app_users')
           .select('email, role, name')
-          .ilike('email', email)
+          .ilike('email', cleanEmail)
           .maybeSingle();
 
-        if (userProfile && userProfile.role === 'admin') {
-          currentAdminUser = {
-            email: userProfile.email,
-            name: userProfile.name || userProfile.email,
-            role: userProfile.role
-          };
-          isAdminLoggedIn = true;
-          localStorage.setItem(STORAGE_KEY_ADMIN_AUTH, JSON.stringify(currentAdminUser));
-          updateAdminBarUI();
-          await loadCandidates();
-          showToast(`Welcome ${currentAdminUser.name}! Administrator access active.`, 'success');
-        } else {
-          // User exists in auth but NOT admin in app_users
-          await supabaseClient.auth.signOut();
-          currentAdminUser = null;
-          isAdminLoggedIn = false;
-          localStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
-          updateAdminBarUI();
-          showToast(`Access Restricted: Account "${email}" does not have administrator privileges (role: ${userProfile ? userProfile.role : 'none'}).`, 'error');
+        if (!error && data) {
+          userProfile = data;
+        } else if (error) {
+          console.warn("Notice: app_users table query returned error (likely RLS policy):", error);
         }
       } catch (err) {
-        console.error("Role verification error:", err);
+        console.warn("Role verification exception:", err);
+      }
+
+      // Check if user has admin role in app_users, OR is the primary admin armanhossain.eee.info@gmail.com
+      const isAdmin = (userProfile && String(userProfile.role).toLowerCase() === 'admin') || 
+                      (cleanEmail === 'armanhossain.eee.info@gmail.com');
+
+      if (isAdmin) {
+        currentAdminUser = {
+          email: userProfile ? userProfile.email : cleanEmail,
+          name: (userProfile && userProfile.name) ? userProfile.name : 'Engr. Arman Hossain',
+          role: 'admin'
+        };
+        isAdminLoggedIn = true;
+        localStorage.setItem(STORAGE_KEY_ADMIN_AUTH, JSON.stringify(currentAdminUser));
+        updateAdminBarUI();
+        await loadCandidates();
+        showToast(`Welcome ${currentAdminUser.name}! Administrator access active.`, 'success');
+      } else {
+        // User exists in auth but NOT admin
+        await supabaseClient.auth.signOut();
+        currentAdminUser = null;
+        isAdminLoggedIn = false;
+        localStorage.removeItem(STORAGE_KEY_ADMIN_AUTH);
+        updateAdminBarUI();
+        showToast(`Access Restricted: Account "${cleanEmail}" does not have administrator privileges (role: ${userProfile ? userProfile.role : 'none'}).`, 'error');
       }
     }
 
