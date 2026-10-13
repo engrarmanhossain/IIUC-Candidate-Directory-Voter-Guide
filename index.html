@@ -543,15 +543,15 @@
   <!-- MODAL: MANAGE USER ROLES (ADMIN ONLY)                                     -->
   <!-- ========================================================================= -->
   <div id="usersManagementModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
       <div class="bg-gradient-to-r from-emerald-950 to-slate-900 p-5 text-white flex items-center justify-between">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <i data-lucide="users" class="w-5 h-5"></i>
+            <i data-lucide="user-check" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 class="font-bold text-base">User Roles & Access Control</h3>
-            <p class="text-xs text-emerald-200">Users with role = 'admin' receive full dashboard privileges</p>
+            <h3 class="font-bold text-base">User Roles & Admin Registration</h3>
+            <p class="text-xs text-emerald-200">Register new admins and control permissions</p>
           </div>
         </div>
         <button onclick="closeUsersManagementModal()" class="text-white/70 hover:text-white">
@@ -560,24 +560,67 @@
       </div>
 
       <div class="p-6 space-y-5">
-        <!-- Add New User Role Form -->
+        <!-- Add / Register Admin User Form -->
         <form onsubmit="handleAssignUserRole(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Assign / Update User Role</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-            <div class="sm:col-span-6">
-              <input type="email" id="assignUserEmail" required placeholder="user@example.com" class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <i data-lucide="user-plus" class="w-4 h-4 text-emerald-600"></i> Register New Admin / Update User
+            </h4>
+            <span class="text-[11px] text-slate-400 font-medium">Creates login & assigns role</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Full Name</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                  <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                </div>
+                <input type="text" id="assignUserName" placeholder="Engr. Full Name" class="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+              </div>
             </div>
-            <div class="sm:col-span-3">
-              <select id="assignUserRole" class="w-full px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-bold text-slate-700">
-                <option value="admin">admin</option>
-                <option value="user">user</option>
-              </select>
+
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Role <span class="text-rose-500">*</span></label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-emerald-600">
+                  <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+                </div>
+                <select id="assignUserRole" class="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                  <option value="admin">admin (Full Dashboard Access)</option>
+                  <option value="moderator">moderator (Review & Approve)</option>
+                  <option value="user">user (Standard Access)</option>
+                </select>
+              </div>
             </div>
-            <div class="sm:col-span-3">
-              <button type="submit" class="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm">
-                Save Role
-              </button>
+
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Email Address <span class="text-rose-500">*</span></label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                  <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                </div>
+                <input type="email" id="assignUserEmail" required placeholder="admin@example.com" class="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+              </div>
             </div>
+
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">Login Password</label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                  <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                </div>
+                <input type="password" id="assignUserPassword" placeholder="Set password (min 6 chars)" minlength="6" class="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-slate-200/60 mt-2">
+            <span class="text-[10px] text-slate-400">Password is required for new accounts (leave blank if only updating existing role).</span>
+            <button type="submit" id="btnAssignUserSubmit" class="py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+              <span id="btnAssignUserText">Save & Register User</span>
+            </button>
           </div>
         </form>
 
@@ -588,9 +631,9 @@
             <table class="w-full text-left text-xs">
               <thead class="bg-slate-100 text-slate-600 uppercase font-semibold border-b">
                 <tr>
-                  <th class="px-4 py-2">Email</th>
+                  <th class="px-4 py-2">User / Name & Email</th>
                   <th class="px-4 py-2">Role</th>
-                  <th class="px-4 py-2 text-right">Action</th>
+                  <th class="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody id="appUsersTableBody" class="divide-y divide-slate-100">
@@ -2200,19 +2243,34 @@
         }
 
         tbody.innerHTML = data.map(u => `
-          <tr class="hover:bg-slate-50">
-            <td class="px-4 py-2 font-mono text-slate-800">${escapeHtml(u.email)}</td>
-            <td class="px-4 py-2">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'admin' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-2.5">
+              <div class="font-bold text-slate-800 text-xs">${escapeHtml(u.name || 'Admin / User')}</div>
+              <div class="font-mono text-[11px] text-slate-500">${escapeHtml(u.email)}</div>
+            </td>
+            <td class="px-4 py-2.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'admin' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-600'}">
                 ${escapeHtml(u.role)}
               </span>
             </td>
-            <td class="px-4 py-2 text-right">
-              ${u.role === 'admin' ? `
-                <button onclick="changeUserRole('${escapeHtml(u.email)}', 'user')" class="text-rose-600 hover:underline text-[11px] font-semibold">Demote to User</button>
-              ` : `
-                <button onclick="changeUserRole('${escapeHtml(u.email)}', 'admin')" class="text-emerald-700 hover:underline text-[11px] font-semibold">Make Admin</button>
-              `}
+            <td class="px-4 py-2.5 text-right whitespace-nowrap">
+              <div class="flex items-center justify-end gap-1.5">
+                <button onclick="editUserRole('${escapeHtml(u.email)}', '${escapeHtml(u.name || '')}', '${escapeHtml(u.role)}')" class="px-2 py-1 text-slate-600 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 rounded text-[11px] font-semibold transition" title="Edit User">
+                  Edit
+                </button>
+                ${u.role === 'admin' ? `
+                  <button onclick="changeUserRole('${escapeHtml(u.email)}', 'user')" class="px-2 py-1 text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 rounded text-[11px] font-semibold transition" title="Demote to User">
+                    Demote
+                  </button>
+                ` : `
+                  <button onclick="changeUserRole('${escapeHtml(u.email)}', 'admin')" class="px-2 py-1 text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded text-[11px] font-semibold transition" title="Make Admin">
+                    Make Admin
+                  </button>
+                `}
+                <button onclick="deleteAppUser('${escapeHtml(u.email)}')" class="px-2 py-1 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded text-[11px] font-semibold transition" title="Remove User">
+                  Delete
+                </button>
+              </div>
             </td>
           </tr>
         `).join('');
@@ -2225,23 +2283,104 @@
 
     async function handleAssignUserRole(event) {
       event.preventDefault();
-      const email = document.getElementById('assignUserEmail').value.trim();
+      const name = document.getElementById('assignUserName').value.trim();
       const role = document.getElementById('assignUserRole').value;
+      const email = document.getElementById('assignUserEmail').value.trim().toLowerCase();
+      const password = document.getElementById('assignUserPassword').value;
 
-      if (!email || !supabaseClient) return;
+      if (!email) {
+        showToast('Please enter a valid email address.', 'error');
+        return;
+      }
+
+      if (password && password.length < 6) {
+        showToast('Password must be at least 6 characters long.', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btnAssignUserSubmit');
+      const submitText = document.getElementById('btnAssignUserText');
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitText) submitText.textContent = "Saving...";
+
+      try {
+        if (supabaseClient) {
+          // 1. If password is provided, register / set user in Supabase Auth
+          if (password) {
+            try {
+              const { error: signUpError } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                  data: { name: name || 'Admin User', role: role }
+                }
+              });
+              if (signUpError && !signUpError.message.includes('already registered')) {
+                console.warn("Auth signup notice:", signUpError.message);
+              }
+            } catch (authErr) {
+              console.warn("Auth signup exception:", authErr);
+            }
+          }
+
+          // 2. Upsert user role and profile into app_users table
+          const userPayload = {
+            email: email,
+            role: role,
+            updated_at: new Date().toISOString()
+          };
+          if (name) userPayload.name = name;
+
+          const { error: dbError } = await supabaseClient
+            .from('app_users')
+            .upsert(userPayload, { onConflict: 'email' });
+
+          if (dbError) throw dbError;
+
+          showToast(`Saved ${email} as ${role}!`, 'success');
+        } else {
+          showToast(`Role "${role}" saved for ${email} (local mode).`, 'info');
+        }
+
+        // Reset input fields
+        document.getElementById('assignUserName').value = '';
+        document.getElementById('assignUserEmail').value = '';
+        document.getElementById('assignUserPassword').value = '';
+        document.getElementById('assignUserPassword').placeholder = "Set password (min 6 chars)";
+        await loadAppUsersTable();
+      } catch (err) {
+        showToast('Failed to save user: ' + err.message, 'error');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitText) submitText.textContent = "Save & Register User";
+      }
+    }
+
+    function editUserRole(email, name, role) {
+      document.getElementById('assignUserEmail').value = email;
+      document.getElementById('assignUserName').value = name;
+      document.getElementById('assignUserRole').value = role;
+      document.getElementById('assignUserPassword').value = '';
+      document.getElementById('assignUserPassword').placeholder = "Enter new password (or leave blank)";
+      document.getElementById('assignUserName').focus();
+      showToast(`Editing user: ${email}`, 'info');
+    }
+
+    async function deleteAppUser(email) {
+      if (!confirm(`Are you sure you want to remove user access for ${email}?`)) return;
+      if (!supabaseClient) return;
 
       try {
         const { error } = await supabaseClient
           .from('app_users')
-          .upsert({ email: email, role: role, updated_at: new Date().toISOString() }, { onConflict: 'email' });
+          .delete()
+          .eq('email', email);
 
         if (error) throw error;
-
-        showToast(`Role "${role}" saved for ${email}!`, 'success');
-        document.getElementById('assignUserEmail').value = '';
+        showToast(`User ${email} removed successfully.`, 'info');
         await loadAppUsersTable();
       } catch (err) {
-        showToast('Failed to assign role: ' + err.message, 'error');
+        showToast('Failed to delete user: ' + err.message, 'error');
       }
     }
 
