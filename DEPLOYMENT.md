@@ -68,3 +68,31 @@ This guide walks you through deploying the **IEB Election — IIUC Candidate Dir
   - If `role === 'admin'`: **Admin Mode** activates immediately!
   - If `role !== 'admin'`: Access is denied.
 - Admins can also click **`User Roles`** in the top bar to promote any other user's email to `admin` right from the dashboard.
+
+---
+
+## 🔄 Upgrading Existing Supabase Database (Public Edit Proposals)
+
+If you already created your Supabase database previously, run this quick snippet in your Supabase **SQL Editor** to enable public candidate edit proposals:
+
+```sql
+-- 1. Add Edit Proposal Columns to candidates table
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requested BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_data JSONB;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requester_name TEXT;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requester_email TEXT;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_reason TEXT;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requested_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_candidates_edit_requested ON public.candidates(edit_requested);
+
+-- 2. Update Row-Level Security (RLS) Policy for Public Updates
+DROP POLICY IF EXISTS "Public can request deletion on approved candidates" ON public.candidates;
+DROP POLICY IF EXISTS "Public can request deletion or edit on approved candidates" ON public.candidates;
+
+CREATE POLICY "Public can request deletion or edit on approved candidates"
+ON public.candidates
+FOR UPDATE
+USING (status = 'approved')
+WITH CHECK (deletion_requested = TRUE OR edit_requested = TRUE);
+```

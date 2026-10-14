@@ -117,6 +117,11 @@
           <span>Pending Submissions (<span id="adminPendingCountBadge">0</span>)</span>
         </button>
 
+        <button onclick="setAdminTab('edits')" class="px-2.5 py-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-bold border border-blue-500/30 flex items-center gap-1.5 transition">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+          <span>Edit Requests (<span id="adminEditsCountBadge">0</span>)</span>
+        </button>
+
         <button onclick="setAdminTab('deletions')" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold border border-rose-500/30 flex items-center gap-1.5 transition">
           <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
           <span>Deletion Requests (<span id="adminDeletionCountBadge">0</span>)</span>
@@ -222,9 +227,9 @@
           <i data-lucide="shield-alert" class="w-5 h-5"></i>
         </div>
         <div>
-          <span class="font-bold text-slate-900">Open IIUC Candidate Submissions with Admin Approval:</span>
+          <span class="font-bold text-slate-900">Open IIUC Candidate Submissions & Edits with Admin Approval:</span>
           <p class="text-slate-600 mt-0.5">
-            Anyone can submit a candidate profile or request a removal. All submissions undergo verification by authorized administrators before appearing on the public directory.
+            Anyone can submit a candidate profile, propose updates to an existing candidate, or request a removal. All submissions undergo verification by authorized administrators before appearing on the public directory.
           </p>
         </div>
       </div>
@@ -245,6 +250,11 @@
           <button id="tabPendingBtn" onclick="setAdminTab('pending')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-800 flex items-center gap-2 transition">
             <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
             <span>Pending Submissions (<span id="tabPendingCount">0</span>)</span>
+          </button>
+
+          <button id="tabEditsBtn" onclick="setAdminTab('edits')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-800 flex items-center gap-2 transition">
+            <i data-lucide="edit-3" class="w-4 h-4 text-blue-600"></i>
+            <span>Edit Requests (<span id="tabEditsCount">0</span>)</span>
           </button>
 
           <button id="tabDeletionsBtn" onclick="setAdminTab('deletions')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-800 flex items-center gap-2 transition">
@@ -683,6 +693,7 @@
 
       <form id="candidateForm" onsubmit="handleSaveCandidate(event)" class="p-6 space-y-6 overflow-y-auto flex-1">
         <input type="hidden" id="candidateId">
+        <input type="hidden" id="formIsPublicEdit" value="0">
 
         <!-- SECTION 1: PHOTO & BASIC IDENTITY -->
         <div>
@@ -859,6 +870,11 @@
               <input type="email" id="formSubmitterEmail" placeholder="your.email@example.com" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
             </div>
           </div>
+
+          <div id="formEditReasonWrapper" class="hidden mt-3 p-3 bg-blue-50/70 border border-blue-200 rounded-lg">
+            <label class="block text-[11px] font-bold text-blue-900 mb-1">Reason / Note for Proposed Edit <span class="text-rose-500">*</span></label>
+            <input type="text" id="formEditReason" placeholder="e.g. Updated current professional designation & phone number" class="w-full px-2.5 py-1.5 bg-white border border-blue-200 rounded text-xs text-slate-800">
+          </div>
         </div>
 
         <div class="pt-4 border-t border-slate-200 flex items-center justify-between">
@@ -932,6 +948,77 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 3B: REVIEW CANDIDATE PROPOSED EDIT (ADMIN APPROVAL WORKFLOW)         -->
+  <!-- ========================================================================= -->
+  <div id="reviewEditModal" class="fixed inset-0 z-50 hidden overflow-y-auto modal-backdrop flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+      
+      <div class="bg-gradient-to-r from-blue-900 to-slate-900 px-6 py-4 text-white flex items-center justify-between border-b border-blue-500/20 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-300">
+            <i data-lucide="file-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold font-display tracking-wide">Review Proposed Candidate Changes</h3>
+            <p id="reviewEditCandidateName" class="text-xs text-blue-200">Candidate: Engr. Name (Ballot #--)</p>
+          </div>
+        </div>
+        <button onclick="closeReviewEditModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 overflow-y-auto flex-1">
+        <!-- Submitter & Reason Info Box -->
+        <div class="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div>
+            <div class="font-bold text-blue-900 flex items-center gap-1.5">
+              <i data-lucide="user-check" class="w-4 h-4 text-blue-600"></i>
+              <span>Submitted by: <strong id="reviewEditSubmitter">--</strong></span>
+            </div>
+            <div class="text-slate-600 mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
+              <span id="reviewEditEmail">--</span>
+              <span class="text-slate-300">•</span>
+              <span id="reviewEditTimestamp">--</span>
+            </div>
+          </div>
+          <div class="sm:text-right bg-white px-3 py-1.5 rounded-lg border border-blue-100 shadow-xs">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Edit Reason / Note</span>
+            <span id="reviewEditReason" class="font-semibold text-slate-800">--</span>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          Compare current live directory data with the proposed submission below. Only modified fields are highlighted in green.
+        </p>
+
+        <!-- Changes Comparison Container -->
+        <div id="reviewEditDiffContainer" class="space-y-3">
+          <!-- Populated dynamically via renderReviewEditDiff() -->
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <button type="button" onclick="rejectCurrentEditRequest()" class="px-4 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center gap-1.5 transition">
+          <i data-lucide="x-circle" class="w-4 h-4"></i>
+          <span>Reject Proposed Edit</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="editProposedBeforeApproving()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition">
+            <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+            <span>Edit Before Approving</span>
+          </button>
+          <button type="button" onclick="approveCurrentEditRequest()" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>Approve & Apply to Live Directory</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1319,6 +1406,13 @@
           contact: c.deletion_requester,
           timestamp: c.deletion_requested_at
         } : null,
+        editRequest: c.edit_requested ? {
+          data: c.edit_data,
+          requesterName: c.edit_requester_name,
+          requesterEmail: c.edit_requester_email,
+          reason: c.edit_reason,
+          timestamp: c.edit_requested_at
+        } : null,
         createdAt: c.created_at
       };
     }
@@ -1326,13 +1420,16 @@
     function updateCountsAndBadges() {
       const approvedCount = candidates.filter(c => c.status === 'approved').length;
       const pendingCount = candidates.filter(c => c.status === 'pending').length;
+      const editCount = candidates.filter(c => c.editRequest != null).length;
       const deletionCount = candidates.filter(c => c.deletionRequest != null).length;
 
       document.getElementById('statTotalCandidates').textContent = approvedCount;
       document.getElementById('tabLiveCount').textContent = approvedCount;
       document.getElementById('tabPendingCount').textContent = pendingCount;
+      if (document.getElementById('tabEditsCount')) document.getElementById('tabEditsCount').textContent = editCount;
       document.getElementById('tabDeletionsCount').textContent = deletionCount;
       document.getElementById('adminPendingCountBadge').textContent = pendingCount;
+      if (document.getElementById('adminEditsCountBadge')) document.getElementById('adminEditsCountBadge').textContent = editCount;
       document.getElementById('adminDeletionCountBadge').textContent = deletionCount;
 
       const uniquePosts = new Set(candidates.filter(c => c.status === 'approved').map(c => c.candidateFor)).size;
@@ -1411,6 +1508,8 @@
             if (cand.status !== 'approved') return false;
           } else if (currentAdminTab === 'pending') {
             if (cand.status !== 'pending') return false;
+          } else if (currentAdminTab === 'edits') {
+            if (!cand.editRequest) return false;
           } else if (currentAdminTab === 'deletions') {
             if (!cand.deletionRequest) return false;
           }
@@ -1481,12 +1580,15 @@
       const img = cand.imageUrl || 'profile.png';
       const isPending = cand.status === 'pending';
       const hasDeletion = cand.deletionRequest != null;
+      const hasEdit = cand.editRequest != null;
 
       let statusBadge = '';
       if (isPending) {
         statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">🟡 Pending Approval</span>`;
       } else if (hasDeletion) {
         statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-900 border border-rose-300">🔴 Deletion Requested</span>`;
+      } else if (hasEdit) {
+        statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-900 border border-blue-300">📝 Edit Requested</span>`;
       }
 
       let actionsHtml = '';
@@ -1516,11 +1618,27 @@
               </button>
             </div>
           `;
+        } else if (hasEdit && currentAdminTab === 'edits') {
+          actionsHtml = `
+            <div class="flex items-center gap-1.5 w-full">
+              <button onclick="openReviewEditModal('${safeId}')" class="flex-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm">
+                <i data-lucide="file-check" class="w-3.5 h-3.5"></i> Review & Approve Edit
+              </button>
+              <button onclick="rejectEditRequest('${safeId}')" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs border border-rose-200" title="Reject Proposed Edit">
+                Reject
+              </button>
+            </div>
+          `;
         } else {
           actionsHtml = `
             <button onclick="openCandidateDetails('${safeId}')" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 transition">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
             </button>
+            ${hasEdit ? `
+              <button onclick="openReviewEditModal('${safeId}')" title="Review Proposed Edit" class="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold flex items-center gap-1 transition">
+                <i data-lucide="file-check" class="w-3.5 h-3.5"></i> Review Edit
+              </button>
+            ` : ''}
             <button onclick="openEditCandidateModal('${safeId}')" title="Edit Candidate" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center transition">
               <i data-lucide="edit" class="w-3.5 h-3.5"></i>
             </button>
@@ -1533,6 +1651,10 @@
         actionsHtml = `
           <button onclick="openCandidateDetails('${safeId}')" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 transition">
             <i data-lucide="eye" class="w-3.5 h-3.5"></i> View Details
+          </button>
+          <button onclick="openSuggestEditCandidateModal('${safeId}')" title="Suggest Edit / Update" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-xs font-semibold flex items-center gap-1 transition">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Edit</span>
           </button>
           <button onclick="openRequestDeletionModal('${safeId}')" title="Report / Request Removal" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 text-xs font-medium flex items-center gap-1 transition">
             <i data-lucide="flag" class="w-3.5 h-3.5"></i>
@@ -1594,6 +1716,18 @@
               </div>
             ` : ''}
 
+            ${hasEdit ? `
+              <div class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-900">
+                <div class="font-bold flex items-center justify-between">
+                  <span class="flex items-center gap-1 text-blue-800">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-600"></i> Proposed Edit by ${escapeHtml(cand.editRequest.requesterName || 'Contributor')}
+                  </span>
+                  <span class="text-[10px] text-blue-600 font-normal">${cand.editRequest.timestamp ? new Date(cand.editRequest.timestamp).toLocaleDateString() : ''}</span>
+                </div>
+                <div class="text-slate-600 mt-0.5 truncate"><strong>Note:</strong> ${escapeHtml(cand.editRequest.reason || 'Information update')}</div>
+              </div>
+            ` : ''}
+
             ${isPending && cand.submitter && cand.submitter.name ? `
               <div class="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-900">
                 <strong>Submitted By:</strong> ${escapeHtml(cand.submitter.name)} (${escapeHtml(cand.submitter.email || 'No email')})
@@ -1617,10 +1751,12 @@
       const img = getCandidateAvatar(cand.imageUrl);
       const isPending = cand.status === 'pending';
       const hasDeletion = cand.deletionRequest != null;
+      const hasEdit = cand.editRequest != null;
 
       let statusBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800">Live</span>';
       if (isPending) statusBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800">Pending</span>';
       if (hasDeletion) statusBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800">Deletion Req</span>';
+      if (hasEdit && !isPending && !hasDeletion) statusBadge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-800">Edit Req</span>';
 
       return `
         <tr class="hover:bg-slate-50 transition">
@@ -1655,9 +1791,11 @@
             <div class="flex items-center justify-end gap-1">
               <button onclick="openCandidateDetails('${safeId}')" class="p-1 rounded text-slate-600 hover:text-emerald-600" title="View"><i data-lucide="eye" class="w-4 h-4"></i></button>
               ${isAdminLoggedIn ? `
+                ${hasEdit ? `<button onclick="openReviewEditModal('${safeId}')" class="p-1 rounded text-blue-600 hover:text-blue-800" title="Review Proposed Edit"><i data-lucide="file-check" class="w-4 h-4"></i></button>` : ''}
                 <button onclick="openEditCandidateModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-blue-600" title="Edit"><i data-lucide="edit" class="w-4 h-4"></i></button>
                 <button onclick="directAdminDelete('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Delete"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               ` : `
+                <button onclick="openSuggestEditCandidateModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-emerald-600" title="Suggest Edit"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
                 <button onclick="openRequestDeletionModal('${safeId}')" class="p-1 rounded text-slate-600 hover:text-rose-600" title="Request Removal"><i data-lucide="flag" class="w-4 h-4"></i></button>
               `}
             </div>
@@ -1672,6 +1810,7 @@
     function openCandidateFormModal() {
       document.getElementById('candidateForm').reset();
       document.getElementById('candidateId').value = '';
+      if (document.getElementById('formIsPublicEdit')) document.getElementById('formIsPublicEdit').value = '0';
       if (document.getElementById('formSession')) {
         document.getElementById('formSession').value = '2025-2026';
       }
@@ -1681,57 +1820,87 @@
 
       const modal = document.getElementById('candidateFormModal');
       const modalTitle = document.getElementById('formModalTitle');
+      const modalSub = document.getElementById('formModalSubtitle');
       const submitBtn = document.getElementById('formSubmitBtnText');
+      const alertBox = document.getElementById('formWorkflowAlert');
+      const editReasonWrapper = document.getElementById('formEditReasonWrapper');
+      if (editReasonWrapper) editReasonWrapper.classList.add('hidden');
 
       if (isAdminLoggedIn) {
         modalTitle.textContent = "Add & Publish Candidate (Admin)";
+        if (modalSub) modalSub.textContent = "Direct Admin Publishing — instant live entry";
         submitBtn.textContent = "Publish Candidate Directly";
+        if (alertBox) alertBox.classList.add('hidden');
       } else {
         modalTitle.textContent = "Submit Candidate Entry";
+        if (modalSub) modalSub.textContent = "Requires review & approval by administrator";
         submitBtn.textContent = "Submit for Admin Approval";
+        if (alertBox) {
+          alertBox.innerHTML = `
+            <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
+            <span>Public submission notice: Once submitted, your candidate entry will be reviewed by an administrator before appearing on the public directory.</span>
+          `;
+          alertBox.classList.remove('hidden');
+        }
       }
 
       modal.classList.remove('hidden');
       lucide.createIcons();
     }
 
-    function openEditCandidateModal(id) {
+    function openEditCandidateModal(id, fromProposed = false) {
       const cand = candidates.find(c => c.id === id);
       if (!cand) return;
 
+      if (!isAdminLoggedIn) {
+        openSuggestEditCandidateModal(id);
+        return;
+      }
+
+      const data = (fromProposed && cand.editRequest && cand.editRequest.data) ? cand.editRequest.data : cand;
+
       document.getElementById('candidateId').value = cand.id;
-      document.getElementById('formName').value = cand.name.replace(/^Engr\.\s*/i, '');
-      document.getElementById('formBallotNo').value = cand.ballotNo || '';
+      if (document.getElementById('formIsPublicEdit')) document.getElementById('formIsPublicEdit').value = "0";
+
+      document.getElementById('formName').value = (data.name || cand.name).replace(/^Engr\.\s*/i, '');
+      document.getElementById('formBallotNo').value = data.ballot_no || cand.ballotNo || '';
       if (document.getElementById('formSession')) {
-        document.getElementById('formSession').value = cand.session || '2025-2026';
+        document.getElementById('formSession').value = data.election_session || cand.session || '2025-2026';
       }
-      document.getElementById('formCandidateFor').value = cand.candidateFor || '';
-      document.getElementById('formBatch').value = cand.batch || '';
-      document.getElementById('formDepartment').value = cand.department || '';
-      document.getElementById('formMembershipId').value = cand.membershipId || '';
+      document.getElementById('formCandidateFor').value = data.candidate_for || cand.candidateFor || '';
+      document.getElementById('formBatch').value = data.batch || cand.batch || '';
+      document.getElementById('formDepartment').value = data.department || cand.department || '';
+      document.getElementById('formMembershipId').value = data.membership_id || cand.membershipId || '';
       if (document.getElementById('formCenter')) {
-        document.getElementById('formCenter').value = cand.center || '';
+        document.getElementById('formCenter').value = data.center !== undefined ? data.center : (cand.center || '');
       }
-      document.getElementById('formDivision').value = cand.division || '';
+      document.getElementById('formDivision').value = data.division !== undefined ? data.division : (cand.division || '');
       
-      document.getElementById('formEducation').value = cand.education || '';
-      document.getElementById('formProfessional').value = cand.professional || '';
-      document.getElementById('formExtraCurricular').value = cand.extraCurricular || '';
-      document.getElementById('formManifesto').value = cand.manifesto || '';
+      document.getElementById('formEducation').value = data.education !== undefined ? data.education : (cand.education || '');
+      document.getElementById('formProfessional').value = data.professional !== undefined ? data.professional : (cand.professional || '');
+      document.getElementById('formExtraCurricular').value = data.extra_curricular !== undefined ? data.extra_curricular : (cand.extraCurricular || '');
+      document.getElementById('formManifesto').value = data.manifesto !== undefined ? data.manifesto : (cand.manifesto || '');
       
-      document.getElementById('formPhone').value = cand.phone || '';
-      document.getElementById('formEmail').value = cand.email || '';
-      document.getElementById('formSocial').value = cand.social || '';
+      document.getElementById('formPhone').value = data.phone !== undefined ? data.phone : (cand.phone || '');
+      document.getElementById('formEmail').value = data.email !== undefined ? data.email : (cand.email || '');
+      document.getElementById('formSocial').value = data.social !== undefined ? data.social : (cand.social || '');
       
-      const img = getCandidateAvatar(cand.imageUrl);
+      const img = getCandidateAvatar(data.image_url || cand.imageUrl);
       document.getElementById('formImagePreview').src = img;
       document.getElementById('formImageUrl').value = (img === DEFAULT_AVATAR || img.startsWith('data:')) ? '' : img;
       selectedImageFile = null;
 
       const modalTitle = document.getElementById('formModalTitle');
+      const modalSub = document.getElementById('formModalSubtitle');
       const submitBtn = document.getElementById('formSubmitBtnText');
-      modalTitle.textContent = isAdminLoggedIn ? "Edit Candidate Details (Admin)" : "Suggest Candidate Update";
-      submitBtn.textContent = isAdminLoggedIn ? "Update & Save Changes" : "Submit Edit for Approval";
+      const alertBox = document.getElementById('formWorkflowAlert');
+      const editReasonWrapper = document.getElementById('formEditReasonWrapper');
+      if (editReasonWrapper) editReasonWrapper.classList.add('hidden');
+
+      modalTitle.textContent = fromProposed ? `Edit & Approve: ${cand.name}` : `Edit Candidate: ${cand.name}`;
+      if (modalSub) modalSub.textContent = "Admin direct edit mode — saving will publish immediately";
+      submitBtn.textContent = "Update & Save Changes";
+      if (alertBox) alertBox.classList.add('hidden');
 
       document.getElementById('candidateFormModal').classList.remove('hidden');
       lucide.createIcons();
@@ -1772,6 +1941,7 @@
       document.getElementById('formSubmitBtnText').textContent = "Saving...";
 
       const id = document.getElementById('candidateId').value;
+      const isPublicEdit = (document.getElementById('formIsPublicEdit') && document.getElementById('formIsPublicEdit').value === "1") || (!isAdminLoggedIn && id);
       const rawName = document.getElementById('formName').value.trim();
       const formattedName = rawName.toLowerCase().startsWith('engr.') ? rawName : `Engr. ${rawName}`;
 
@@ -1800,7 +1970,7 @@
         if (existingCand && existingCand.imageUrl) finalImageUrl = existingCand.imageUrl;
       }
 
-      const dbPayload = {
+      const candidateData = {
         name: formattedName,
         ballot_no: document.getElementById('formBallotNo').value.trim(),
         election_session: (document.getElementById('formSession') ? document.getElementById('formSession').value.trim() : '') || '2025-2026',
@@ -1817,12 +1987,95 @@
         phone: document.getElementById('formPhone').value.trim(),
         email: document.getElementById('formEmail').value.trim(),
         social: document.getElementById('formSocial').value.trim(),
-        image_url: finalImageUrl,
+        image_url: finalImageUrl
+      };
+
+      // -----------------------------------------------------------------------
+      // CASE 1: PUBLIC SUGGEST EDIT ON EXISTING CANDIDATE (ADMIN APPROVAL REQUIRED)
+      // -----------------------------------------------------------------------
+      if (isPublicEdit && id && !isAdminLoggedIn) {
+        const requesterName = document.getElementById('formSubmitterName').value.trim() || 'Public Submitter';
+        const requesterEmail = document.getElementById('formSubmitterEmail').value.trim() || '';
+        const editReason = document.getElementById('formEditReason') ? document.getElementById('formEditReason').value.trim() : 'Public candidate update';
+
+        const editPayload = {
+          edit_requested: true,
+          edit_data: candidateData,
+          edit_requester_name: requesterName,
+          edit_requester_email: requesterEmail,
+          edit_reason: editReason || 'Candidate profile update',
+          edit_requested_at: new Date().toISOString()
+        };
+
+        if (supabaseClient) {
+          try {
+            const { error: editErr } = await supabaseClient
+              .from('candidates')
+              .update(editPayload)
+              .eq('id', id);
+
+            if (editErr) {
+              console.error("Supabase edit submission error:", editErr);
+              if (editErr.message.includes("column") || editErr.message.includes("schema cache")) {
+                showToast("Notice: Database requires the edit_requested migration. Run the SQL script in Supabase.", "error");
+              } else if (editErr.message.includes("row-level security")) {
+                showToast("RLS error: Public update policy required in database. Run the migration SQL in Supabase.", "error");
+              } else {
+                showToast(`Submission failed: ${editErr.message}`, 'error');
+              }
+              submitBtn.disabled = false;
+              document.getElementById('formSubmitBtnText').textContent = originalText;
+              return;
+            }
+
+            showToast("Proposed edit submitted! It will appear on the live directory once reviewed & approved by an admin.", "success");
+          } catch (err) {
+            showToast(`Submission error: ${err.message}`, 'error');
+            submitBtn.disabled = false;
+            document.getElementById('formSubmitBtnText').textContent = originalText;
+            return;
+          }
+        } else {
+          const cand = candidates.find(c => c.id === id);
+          if (cand) {
+            cand.editRequest = {
+              data: candidateData,
+              requesterName: requesterName,
+              requesterEmail: requesterEmail,
+              reason: editReason || 'Candidate profile update',
+              timestamp: new Date().toISOString()
+            };
+            localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+          }
+          showToast("Proposed edit saved locally! Awaiting admin review.", "success");
+        }
+
+        submitBtn.disabled = false;
+        document.getElementById('formSubmitBtnText').textContent = originalText;
+        closeCandidateFormModal();
+        await loadCandidates();
+        return;
+      }
+
+      // -----------------------------------------------------------------------
+      // CASE 2: ADMIN DIRECT SAVE OR PUBLIC NEW CANDIDATE SUBMISSION
+      // -----------------------------------------------------------------------
+      const dbPayload = {
+        ...candidateData,
         status: isAdminLoggedIn ? 'approved' : 'pending',
         submitter_name: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.name : 'Admin') : (document.getElementById('formSubmitterName').value.trim() || 'Public Submitter'),
         submitter_email: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.email : '') : (document.getElementById('formSubmitterEmail').value.trim() || ''),
         updated_at: new Date().toISOString()
       };
+
+      if (isAdminLoggedIn && id) {
+        dbPayload.edit_requested = false;
+        dbPayload.edit_data = null;
+        dbPayload.edit_requester_name = null;
+        dbPayload.edit_requester_email = null;
+        dbPayload.edit_reason = null;
+        dbPayload.edit_requested_at = null;
+      }
 
       if (isAdminLoggedIn && !id) {
         dbPayload.approved_at = new Date().toISOString();
@@ -1839,11 +2092,18 @@
             resError = error;
           }
 
-          // Adaptive retry if any column ('election_session', 'center') is missing in Supabase schema cache
+          // Adaptive retry if any column ('election_session', 'center', 'edit_requested') is missing in Supabase schema cache
           if (resError && (resError.message.includes("schema cache") || resError.message.includes("column"))) {
             console.warn("Notice: Column mismatch in Supabase schema cache. Retrying with adaptive fallback...");
             const centerVal = dbPayload.center;
             delete dbPayload.center;
+            delete dbPayload.edit_requested;
+            delete dbPayload.edit_data;
+            delete dbPayload.edit_requester_name;
+            delete dbPayload.edit_requester_email;
+            delete dbPayload.edit_reason;
+            delete dbPayload.edit_requested_at;
+
             if (centerVal && dbPayload.division && !dbPayload.division.includes(centerVal)) {
               dbPayload.division = `${dbPayload.division} (${centerVal})`;
             }
@@ -1877,7 +2137,7 @@
           if (resError) {
             console.error("Supabase submission error:", resError);
             if (resError.message.includes("row-level security")) {
-              showToast("Supabase RLS error: Public insert policy required in database. Run the migration SQL in Supabase.", "error");
+              showToast("Supabase RLS error: Public insert/update policy required in database. Run the migration SQL in Supabase.", "error");
             } else {
               showToast(`Database error: ${resError.message}`, 'error');
             }
@@ -2062,6 +2322,357 @@
     }
 
     // =========================================================================
+    // EDIT REQUESTS (PUBLIC PROPOSALS & ADMIN REVIEW/APPROVAL)
+    // =========================================================================
+    let currentReviewingCandidateId = null;
+
+    function openSuggestEditCandidateModal(id) {
+      const cand = candidates.find(c => c.id === id);
+      if (!cand) return;
+
+      const data = (cand.editRequest && cand.editRequest.data) ? cand.editRequest.data : cand;
+
+      document.getElementById('candidateForm').reset();
+      document.getElementById('candidateId').value = cand.id;
+      if (document.getElementById('formIsPublicEdit')) document.getElementById('formIsPublicEdit').value = "1";
+
+      document.getElementById('formName').value = (data.name || cand.name).replace(/^Engr\.\s*/i, '');
+      document.getElementById('formBallotNo').value = data.ballot_no || cand.ballotNo || '';
+      if (document.getElementById('formSession')) {
+        document.getElementById('formSession').value = data.election_session || cand.session || '2025-2026';
+      }
+      document.getElementById('formCandidateFor').value = data.candidate_for || cand.candidateFor || '';
+      document.getElementById('formBatch').value = data.batch || cand.batch || '';
+      document.getElementById('formDepartment').value = data.department || cand.department || '';
+      document.getElementById('formMembershipId').value = data.membership_id || cand.membershipId || '';
+      if (document.getElementById('formCenter')) {
+        document.getElementById('formCenter').value = data.center !== undefined ? data.center : (cand.center || '');
+      }
+      document.getElementById('formDivision').value = data.division !== undefined ? data.division : (cand.division || '');
+      
+      document.getElementById('formEducation').value = data.education !== undefined ? data.education : (cand.education || '');
+      document.getElementById('formProfessional').value = data.professional !== undefined ? data.professional : (cand.professional || '');
+      document.getElementById('formExtraCurricular').value = data.extra_curricular !== undefined ? data.extra_curricular : (cand.extraCurricular || '');
+      document.getElementById('formManifesto').value = data.manifesto !== undefined ? data.manifesto : (cand.manifesto || '');
+      
+      document.getElementById('formPhone').value = data.phone !== undefined ? data.phone : (cand.phone || '');
+      document.getElementById('formEmail').value = data.email !== undefined ? data.email : (cand.email || '');
+      document.getElementById('formSocial').value = data.social !== undefined ? data.social : (cand.social || '');
+      
+      const img = getCandidateAvatar(data.image_url || cand.imageUrl);
+      document.getElementById('formImagePreview').src = img;
+      document.getElementById('formImageUrl').value = (img === DEFAULT_AVATAR || img.startsWith('data:')) ? '' : img;
+      selectedImageFile = null;
+
+      const modalTitle = document.getElementById('formModalTitle');
+      const modalSub = document.getElementById('formModalSubtitle');
+      const submitBtn = document.getElementById('formSubmitBtnText');
+      const alertBox = document.getElementById('formWorkflowAlert');
+      const editReasonWrapper = document.getElementById('formEditReasonWrapper');
+
+      modalTitle.textContent = `Suggest Edit: ${cand.name}`;
+      if (modalSub) modalSub.textContent = "Proposed changes will be reviewed & verified by an admin";
+      if (alertBox) {
+        alertBox.innerHTML = `
+          <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
+          <span>You are proposing changes for <strong>${escapeHtml(cand.name)}</strong>. The live profile remains active until an administrator reviews and approves your submission.</span>
+        `;
+        alertBox.classList.remove('hidden');
+      }
+
+      if (editReasonWrapper) editReasonWrapper.classList.remove('hidden');
+      if (cand.editRequest && cand.editRequest.reason && document.getElementById('formEditReason')) {
+        document.getElementById('formEditReason').value = cand.editRequest.reason;
+      }
+      if (cand.editRequest && cand.editRequest.requesterName && document.getElementById('formSubmitterName')) {
+        document.getElementById('formSubmitterName').value = cand.editRequest.requesterName;
+      }
+      if (cand.editRequest && cand.editRequest.requesterEmail && document.getElementById('formSubmitterEmail')) {
+        document.getElementById('formSubmitterEmail').value = cand.editRequest.requesterEmail;
+      }
+
+      submitBtn.textContent = "Submit Edit for Approval";
+      const noticeFooter = document.getElementById('formNoticeFooter');
+      if (noticeFooter) noticeFooter.textContent = "All suggested updates undergo administrative verification before going live.";
+
+      document.getElementById('candidateFormModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function openReviewEditModal(id) {
+      const cand = candidates.find(c => c.id === id);
+      if (!cand || !cand.editRequest) {
+        showToast('No proposed edits found for this candidate.', 'info');
+        return;
+      }
+      currentReviewingCandidateId = id;
+      const req = cand.editRequest;
+      const proposed = req.data || {};
+
+      document.getElementById('reviewEditCandidateName').textContent = `Candidate: ${cand.name} (Ballot #${cand.ballotNo || '--'})`;
+      document.getElementById('reviewEditSubmitter').textContent = req.requesterName || 'Public Contributor';
+      document.getElementById('reviewEditEmail').textContent = req.requesterEmail ? `Email: ${req.requesterEmail}` : 'No email provided';
+      document.getElementById('reviewEditTimestamp').textContent = req.timestamp ? new Date(req.timestamp).toLocaleString() : 'Recently';
+      document.getElementById('reviewEditReason').textContent = req.reason || 'General Information Update';
+
+      renderReviewEditDiff(cand, proposed);
+      document.getElementById('reviewEditModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeReviewEditModal() {
+      document.getElementById('reviewEditModal').classList.add('hidden');
+      currentReviewingCandidateId = null;
+    }
+
+    function renderReviewEditDiff(cand, proposed) {
+      const container = document.getElementById('reviewEditDiffContainer');
+      if (!container) return;
+
+      const fields = [
+        { key: 'name', label: 'Candidate Name', current: cand.name, proposed: proposed.name },
+        { key: 'ballot_no', label: 'Ballot No', current: cand.ballotNo, proposed: proposed.ballot_no },
+        { key: 'election_session', label: 'Election Session', current: cand.session, proposed: proposed.election_session },
+        { key: 'candidate_for', label: 'Candidate For (Post)', current: cand.candidateFor, proposed: proposed.candidate_for },
+        { key: 'center', label: 'Center', current: cand.center, proposed: proposed.center },
+        { key: 'division', label: 'Division', current: cand.division, proposed: proposed.division },
+        { key: 'department', label: 'Department', current: cand.department, proposed: proposed.department },
+        { key: 'batch', label: 'IIUC Batch', current: cand.batch, proposed: proposed.batch },
+        { key: 'membership_id', label: 'IEB Membership ID', current: cand.membershipId, proposed: proposed.membership_id },
+        { key: 'image_url', label: 'Profile Photo', current: cand.imageUrl, proposed: proposed.image_url, isImage: true },
+        { key: 'education', label: 'Educational Qualifications', current: cand.education, proposed: proposed.education, isMultiline: true },
+        { key: 'professional', label: 'Professional Experience', current: cand.professional, proposed: proposed.professional, isMultiline: true },
+        { key: 'extra_curricular', label: 'Extra-Curricular & Leadership', current: cand.extraCurricular, proposed: proposed.extra_curricular, isMultiline: true },
+        { key: 'manifesto', label: 'Manifesto / Vision', current: cand.manifesto, proposed: proposed.manifesto, isMultiline: true },
+        { key: 'phone', label: 'Phone', current: cand.phone, proposed: proposed.phone },
+        { key: 'email', label: 'Email', current: cand.email, proposed: proposed.email },
+        { key: 'social', label: 'Social Profile', current: cand.social, proposed: proposed.social }
+      ];
+
+      let changedFieldsHtml = '';
+      let unchangedFieldsHtml = '';
+      let changedCount = 0;
+
+      fields.forEach(f => {
+        const curVal = (f.current || '').toString().trim();
+        const propVal = (f.proposed !== undefined ? f.proposed : f.current || '').toString().trim();
+        const isChanged = curVal !== propVal && propVal.length > 0;
+
+        if (isChanged) {
+          changedCount++;
+          if (f.isImage) {
+            changedFieldsHtml += `
+              <div class="p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-800">${escapeHtml(f.label)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">MODIFIED</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                  <div class="p-2 bg-slate-100 rounded-lg border border-slate-200 flex flex-col items-center">
+                    <span class="text-[10px] text-slate-500 font-bold mb-1">Current Live Photo</span>
+                    <img src="${escapeHtml(getCandidateAvatar(curVal))}" class="w-16 h-16 rounded-lg object-cover border border-slate-300">
+                  </div>
+                  <div class="p-2 bg-emerald-100/50 rounded-lg border border-emerald-300 flex flex-col items-center">
+                    <span class="text-[10px] text-emerald-800 font-bold mb-1">Proposed New Photo</span>
+                    <img src="${escapeHtml(getCandidateAvatar(propVal))}" class="w-16 h-16 rounded-lg object-cover border border-emerald-400">
+                  </div>
+                </div>
+              </div>
+            `;
+          } else {
+            changedFieldsHtml += `
+              <div class="p-3 bg-emerald-50/40 border border-emerald-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-800">${escapeHtml(f.label)}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">MODIFIED</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div class="p-2.5 bg-slate-100/80 rounded-lg border border-slate-200 text-slate-700">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Current Live:</span>
+                    <div class="${f.isMultiline ? 'whitespace-pre-line font-mono text-[11px]' : 'font-medium'} text-slate-600">${escapeHtml(curVal || '(Empty)')}</div>
+                  </div>
+                  <div class="p-2.5 bg-emerald-100/60 rounded-lg border border-emerald-300 text-emerald-950 shadow-xs">
+                    <span class="text-[10px] uppercase font-bold text-emerald-700 block mb-1">Proposed New:</span>
+                    <div class="${f.isMultiline ? 'whitespace-pre-line font-mono text-[11px]' : 'font-bold'} text-emerald-900">${escapeHtml(propVal)}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        } else {
+          unchangedFieldsHtml += `
+            <div class="flex items-center justify-between py-1.5 border-b border-slate-100 text-xs">
+              <span class="font-medium text-slate-600">${escapeHtml(f.label)}</span>
+              <span class="text-slate-400 truncate max-w-xs font-mono text-[11px]">${escapeHtml(curVal || '(Empty)')}</span>
+            </div>
+          `;
+        }
+      });
+
+      if (changedCount === 0) {
+        container.innerHTML = `
+          <div class="p-6 text-center bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-xs">
+            <i data-lucide="info" class="w-6 h-6 text-slate-400 mx-auto mb-2"></i>
+            <span>No specific field differences detected between the current live profile and this proposed edit.</span>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="space-y-3">
+            ${changedFieldsHtml}
+          </div>
+          <details class="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs">
+            <summary class="font-bold text-slate-700 cursor-pointer select-none">
+              View Unchanged Fields (${fields.length - changedCount})
+            </summary>
+            <div class="mt-2 pt-2 border-t border-slate-200 divide-y divide-slate-100">
+              ${unchangedFieldsHtml}
+            </div>
+          </details>
+        `;
+      }
+    }
+
+    async function approveCandidateEdit(id) {
+      if (!isAdminLoggedIn) return;
+      const cand = candidates.find(c => c.id === id);
+      if (!cand || !cand.editRequest || !cand.editRequest.data) return;
+
+      const proposed = cand.editRequest.data;
+      const updatePayload = {
+        name: proposed.name || cand.name,
+        ballot_no: proposed.ballot_no || cand.ballotNo,
+        election_session: proposed.election_session || cand.session,
+        candidate_for: proposed.candidate_for || cand.candidateFor,
+        center: proposed.center !== undefined ? proposed.center : cand.center,
+        division: proposed.division !== undefined ? proposed.division : cand.division,
+        department: proposed.department || cand.department,
+        batch: proposed.batch || cand.batch,
+        membership_id: proposed.membership_id || cand.membershipId,
+        image_url: proposed.image_url || cand.imageUrl,
+        education: proposed.education !== undefined ? proposed.education : cand.education,
+        professional: proposed.professional !== undefined ? proposed.professional : cand.professional,
+        extra_curricular: proposed.extra_curricular !== undefined ? proposed.extra_curricular : cand.extraCurricular,
+        manifesto: proposed.manifesto !== undefined ? proposed.manifesto : cand.manifesto,
+        phone: proposed.phone !== undefined ? proposed.phone : cand.phone,
+        email: proposed.email !== undefined ? proposed.email : cand.email,
+        social: proposed.social !== undefined ? proposed.social : cand.social,
+        edit_requested: false,
+        edit_data: null,
+        edit_requester_name: null,
+        edit_requester_email: null,
+        edit_reason: null,
+        edit_requested_at: null,
+        updated_at: new Date().toISOString()
+      };
+
+      if (supabaseClient) {
+        try {
+          let { error } = await supabaseClient
+            .from('candidates')
+            .update(updatePayload)
+            .eq('id', id);
+
+          if (error && (error.message.includes("column") || error.message.includes("schema cache"))) {
+            // Adaptive retry without edit fields if not yet migrated
+            delete updatePayload.edit_requested;
+            delete updatePayload.edit_data;
+            delete updatePayload.edit_requester_name;
+            delete updatePayload.edit_requester_email;
+            delete updatePayload.edit_reason;
+            delete updatePayload.edit_requested_at;
+            const { error: retryErr } = await supabaseClient
+              .from('candidates')
+              .update(updatePayload)
+              .eq('id', id);
+            error = retryErr;
+          }
+
+          if (error) {
+            showToast('Failed to apply edit: ' + error.message, 'error');
+            return;
+          }
+        } catch (e) {
+          showToast('Error applying edit: ' + e.message, 'error');
+          return;
+        }
+      } else {
+        const idx = candidates.findIndex(c => c.id === id);
+        if (idx !== -1) {
+          candidates[idx] = normalizeCandidateRecord({
+            id: id,
+            ...updatePayload,
+            status: cand.status
+          });
+          localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+        }
+      }
+
+      closeReviewEditModal();
+      showToast('Proposed changes approved and published to live directory!', 'success');
+      await loadCandidates();
+    }
+
+    async function rejectEditRequest(id) {
+      if (!isAdminLoggedIn) return;
+      if (!confirm('Dismiss and reject this proposed edit? The live candidate profile will remain unchanged.')) return;
+
+      const clearPayload = {
+        edit_requested: false,
+        edit_data: null,
+        edit_requester_name: null,
+        edit_requester_email: null,
+        edit_reason: null,
+        edit_requested_at: null,
+        updated_at: new Date().toISOString()
+      };
+
+      if (supabaseClient) {
+        try {
+          let { error } = await supabaseClient
+            .from('candidates')
+            .update(clearPayload)
+            .eq('id', id);
+
+          if (error && (error.message.includes("column") || error.message.includes("schema cache"))) {
+            console.warn("Schema cache missing edit fields on reject.");
+          } else if (error) {
+            showToast('Failed to dismiss edit: ' + error.message, 'error');
+            return;
+          }
+        } catch (e) {
+          showToast('Error: ' + e.message, 'error');
+          return;
+        }
+      } else {
+        const cand = candidates.find(c => c.id === id);
+        if (cand) cand.editRequest = null;
+        localStorage.setItem(STORAGE_KEY_LOCAL_BACKUP, JSON.stringify(candidates));
+      }
+
+      closeReviewEditModal();
+      showToast('Proposed edit request dismissed.', 'info');
+      await loadCandidates();
+    }
+
+    async function approveCurrentEditRequest() {
+      if (!currentReviewingCandidateId) return;
+      await approveCandidateEdit(currentReviewingCandidateId);
+    }
+
+    async function rejectCurrentEditRequest() {
+      if (!currentReviewingCandidateId) return;
+      await rejectEditRequest(currentReviewingCandidateId);
+    }
+
+    function editProposedBeforeApproving() {
+      if (!currentReviewingCandidateId) return;
+      const id = currentReviewingCandidateId;
+      closeReviewEditModal();
+      openEditCandidateModal(id, true);
+    }
+
+    // =========================================================================
     // CANDIDATE PROFILE DETAILS MODAL
     // =========================================================================
     function openCandidateDetails(id) {
@@ -2152,6 +2763,11 @@
               <i data-lucide="check" class="w-3.5 h-3.5"></i> Approve
             </button>
           ` : ''}
+          ${cand.editRequest ? `
+            <button onclick="closeDetailsModal(); openReviewEditModal('${safeId}');" class="px-3.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 text-xs font-bold flex items-center gap-1">
+              <i data-lucide="file-check" class="w-3.5 h-3.5"></i> Review Edit
+            </button>
+          ` : ''}
           <button onclick="closeDetailsModal(); openEditCandidateModal('${safeId}');" class="px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-bold flex items-center gap-1">
             <i data-lucide="edit" class="w-3.5 h-3.5"></i> Edit
           </button>
@@ -2162,7 +2778,10 @@
         `;
       } else {
         actionsContainer.innerHTML = `
-          <button onclick="closeDetailsModal(); openRequestDeletionModal('${safeId}');" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-medium flex items-center gap-1">
+          <button onclick="closeDetailsModal(); openSuggestEditCandidateModal('${safeId}');" class="px-3.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center gap-1.5 transition">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-emerald-600"></i> Suggest Edit
+          </button>
+          <button onclick="closeDetailsModal(); openRequestDeletionModal('${safeId}');" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-medium flex items-center gap-1 transition">
             <i data-lucide="flag" class="w-3.5 h-3.5"></i> Request Removal
           </button>
           <button onclick="closeDetailsModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-bold">Close</button>
@@ -2360,22 +2979,26 @@
       currentAdminTab = tab;
       const tabLiveBtn = document.getElementById('tabLiveBtn');
       const tabPendingBtn = document.getElementById('tabPendingBtn');
+      const tabEditsBtn = document.getElementById('tabEditsBtn');
       const tabDeletionsBtn = document.getElementById('tabDeletionsBtn');
       const currentTabLabel = document.getElementById('currentTabLabel');
 
-      [tabLiveBtn, tabPendingBtn, tabDeletionsBtn].forEach(b => {
+      [tabLiveBtn, tabPendingBtn, tabEditsBtn, tabDeletionsBtn].filter(Boolean).forEach(b => {
         b.className = 'px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-2 transition';
       });
 
       if (tab === 'live') {
-        tabLiveBtn.className = 'px-3.5 py-2 rounded-lg bg-emerald-600 text-white flex items-center gap-2 transition';
-        currentTabLabel.textContent = 'Live Approved Candidates';
+        if (tabLiveBtn) tabLiveBtn.className = 'px-3.5 py-2 rounded-lg bg-emerald-600 text-white flex items-center gap-2 transition';
+        if (currentTabLabel) currentTabLabel.textContent = 'Live Approved Candidates';
       } else if (tab === 'pending') {
-        tabPendingBtn.className = 'px-3.5 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold flex items-center gap-2 transition shadow-sm';
-        currentTabLabel.textContent = 'Pending Submissions Awaiting Approval';
+        if (tabPendingBtn) tabPendingBtn.className = 'px-3.5 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold flex items-center gap-2 transition shadow-sm';
+        if (currentTabLabel) currentTabLabel.textContent = 'Pending Submissions Awaiting Approval';
+      } else if (tab === 'edits') {
+        if (tabEditsBtn) tabEditsBtn.className = 'px-3.5 py-2 rounded-lg bg-blue-600 text-white font-bold flex items-center gap-2 transition shadow-sm';
+        if (currentTabLabel) currentTabLabel.textContent = 'Candidate Edit Requests Awaiting Approval';
       } else if (tab === 'deletions') {
-        tabDeletionsBtn.className = 'px-3.5 py-2 rounded-lg bg-rose-600 text-white font-bold flex items-center gap-2 transition shadow-sm';
-        currentTabLabel.textContent = 'Candidate Deletion Requests';
+        if (tabDeletionsBtn) tabDeletionsBtn.className = 'px-3.5 py-2 rounded-lg bg-rose-600 text-white font-bold flex items-center gap-2 transition shadow-sm';
+        if (currentTabLabel) currentTabLabel.textContent = 'Candidate Deletion Requests';
       }
 
       handleSearchFilter();

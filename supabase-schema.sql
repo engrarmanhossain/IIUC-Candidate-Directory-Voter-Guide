@@ -86,6 +86,12 @@ CREATE TABLE IF NOT EXISTS public.candidates (
     deletion_details TEXT,
     deletion_requester TEXT,
     deletion_requested_at TIMESTAMPTZ,
+    edit_requested BOOLEAN DEFAULT FALSE,
+    edit_data JSONB,
+    edit_requester_name TEXT,
+    edit_requester_email TEXT,
+    edit_reason TEXT,
+    edit_requested_at TIMESTAMPTZ,
     approved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
@@ -98,10 +104,17 @@ CREATE INDEX IF NOT EXISTS idx_candidates_session ON public.candidates(election_
 CREATE INDEX IF NOT EXISTS idx_candidates_department ON public.candidates(department);
 CREATE INDEX IF NOT EXISTS idx_candidates_center ON public.candidates(center);
 CREATE INDEX IF NOT EXISTS idx_candidates_division ON public.candidates(division);
+CREATE INDEX IF NOT EXISTS idx_candidates_edit_requested ON public.candidates(edit_requested);
 
 -- Migration query for existing databases:
 ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS election_session TEXT DEFAULT '2025-2026';
 ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS center TEXT DEFAULT '';
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requested BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_data JSONB;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requester_name TEXT;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requester_email TEXT;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_reason TEXT;
+ALTER TABLE public.candidates ADD COLUMN IF NOT EXISTS edit_requested_at TIMESTAMPTZ;
 
 -- 4. Row-Level Security (RLS) on Candidates
 ALTER TABLE public.candidates ENABLE ROW LEVEL SECURITY;
@@ -118,12 +131,15 @@ ON public.candidates
 FOR INSERT
 WITH CHECK (status = 'pending');
 
--- Policy 3: Public Update - Anyone can submit a deletion request on an approved candidate
-CREATE POLICY "Public can request deletion on approved candidates"
+-- Policy 3: Public Update - Anyone can submit a deletion request or suggest an edit on an approved candidate
+DROP POLICY IF EXISTS "Public can request deletion on approved candidates" ON public.candidates;
+DROP POLICY IF EXISTS "Public can request deletion or edit on approved candidates" ON public.candidates;
+
+CREATE POLICY "Public can request deletion or edit on approved candidates"
 ON public.candidates
 FOR UPDATE
 USING (status = 'approved')
-WITH CHECK (deletion_requested = TRUE);
+WITH CHECK (deletion_requested = TRUE OR edit_requested = TRUE);
 
 -- Policy 4: Admin Full Access - Any user whose email in app_users has role = 'admin'
 CREATE POLICY "Admin full access based on app_users role"
