@@ -51,23 +51,6 @@
     }
   </script>
 
-  <style>
-    @media print {
-      .no-print { display: none !important; }
-      body { background: white !important; color: black !important; font-size: 11pt; }
-      .print-page-break { page-break-after: always; }
-      .candidate-card-print {
-        border: 1px solid #ccc !important;
-        box-shadow: none !important;
-        break-inside: avoid;
-      }
-    }
-    
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="iiuc-logo.png">
   <link rel="apple-touch-icon" href="iiuc-logo.png">
@@ -89,6 +72,16 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    
     .gold-gradient {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     }
@@ -100,114 +93,128 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
 
-  <!-- ADMIN ACTIVE TOP BAR (Visible when Admin is logged in) -->
-  <div id="adminTopBar" class="hidden bg-emerald-950 text-white px-4 py-2 border-b border-emerald-500/30 text-xs no-print">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          ADMIN MODE ACTIVE
-        </span>
-        <span class="text-slate-300">Logged in: <strong id="adminEmailDisplay" class="text-amber-300 font-mono">admin@example.com</strong> (<span id="adminRoleDisplay" class="text-emerald-400 uppercase font-bold text-[10px]">ADMIN</span>)</span>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <button onclick="setAdminTab('pending')" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1.5 transition">
-          <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-          <span>Pending Submissions (<span id="adminPendingCountBadge">0</span>)</span>
-        </button>
-
-        <button onclick="setAdminTab('edits')" class="px-2.5 py-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-bold border border-blue-500/30 flex items-center gap-1.5 transition">
-          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-          <span>Edit Requests (<span id="adminEditsCountBadge">0</span>)</span>
-        </button>
-
-        <button onclick="setAdminTab('deletions')" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold border border-rose-500/30 flex items-center gap-1.5 transition">
-          <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
-          <span>Deletion Requests (<span id="adminDeletionCountBadge">0</span>)</span>
-        </button>
-
-        <button onclick="openUsersManagementModal()" class="px-2.5 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold border border-emerald-600 flex items-center gap-1 transition">
-          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
-          <span>User Roles</span>
-        </button>
-
-        <button onclick="logoutAdmin()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 flex items-center gap-1 transition">
-          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN HEADER -->
-  <header class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white shadow-lg sticky top-0 z-30 no-print border-b border-emerald-500/30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-20">
-        
-        <!-- Official IIUC Logo & Title -->
-        <div class="flex items-center space-x-3 sm:space-x-4">
-          <div class="w-12 h-12 sm:w-14 sm:h-14 p-1 bg-white/10 rounded-2xl border border-white/20 shadow-md flex items-center justify-center shrink-0 backdrop-blur-sm">
-            <img src="iiuc-logo.png" alt="IIUC Emblem" class="w-full h-full object-contain filter drop-shadow">
+  <!-- STICKY TOP CONTAINER (Contains Admin Bar + Main Header together so they never overlap) -->
+  <div class="sticky top-0 z-30 no-print shadow-lg">
+    <!-- ADMIN ACTIVE TOP BAR (Visible when Admin is logged in) -->
+    <div id="adminTopBar" class="hidden bg-emerald-950 text-white px-3 sm:px-4 py-1.5 sm:py-2 border-b border-emerald-500/30 text-xs">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 text-[10px] sm:text-xs shrink-0">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              ADMIN ACTIVE
+            </span>
+            <span class="text-slate-300 text-[11px] sm:text-xs truncate max-w-[180px] sm:max-w-none">
+              <strong id="adminEmailDisplay" class="text-amber-300 font-mono">admin@example.com</strong>
+            </span>
           </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] sm:text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                IIUC Engineers Chapter
-              </span>
-              <span class="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                IEB Election — Term 2027 & 2028
-              </span>
-            </div>
-            <h1 class="text-lg sm:text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2 mt-0.5">
-              IIUC Candidate Directory & Voter Guide
-            </h1>
-          </div>
+          <!-- Mobile Logout Button -->
+          <button onclick="logoutAdmin()" class="sm:hidden px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 flex items-center gap-1 text-[11px] shrink-0" title="Logout">
+            <i data-lucide="log-out" class="w-3 h-3"></i>
+            <span>Logout</span>
+          </button>
         </div>
 
-        <!-- Header Actions -->
-        <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- Quick Filter Tabs (Scrollable on mobile) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[11px] sm:text-xs shrink-0">
+          <button onclick="setAdminTab('pending')" class="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1 whitespace-nowrap shrink-0">
+            <i data-lucide="clock" class="w-3 h-3"></i>
+            <span>Pending (<span id="adminPendingCountBadge">0</span>)</span>
+          </button>
+
+          <button onclick="setAdminTab('edits')" class="px-2 py-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-bold border border-blue-500/30 flex items-center gap-1 whitespace-nowrap shrink-0">
+            <i data-lucide="edit-3" class="w-3 h-3"></i>
+            <span>Edits (<span id="adminEditsCountBadge">0</span>)</span>
+          </button>
+
+          <button onclick="setAdminTab('deletions')" class="px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold border border-rose-500/30 flex items-center gap-1 whitespace-nowrap shrink-0">
+            <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+            <span>Deletions (<span id="adminDeletionCountBadge">0</span>)</span>
+          </button>
+
+          <button onclick="openUsersManagementModal()" class="px-2 py-1 rounded bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold border border-emerald-600 flex items-center gap-1 whitespace-nowrap shrink-0">
+            <i data-lucide="shield" class="w-3 h-3"></i>
+            <span>Roles</span>
+          </button>
+
+          <!-- Desktop Logout Button -->
+          <button onclick="logoutAdmin()" class="hidden sm:inline-flex px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 items-center gap-1 whitespace-nowrap shrink-0">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN HEADER -->
+    <header class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white border-b border-emerald-500/30">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between py-2.5 sm:py-0 sm:h-20 gap-2">
           
-          <!-- Print Guide Button -->
-          <button onclick="window.print()" class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
-            <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>Print</span>
-          </button>
-
-          <!-- Export Dropdown -->
-          <div class="relative group">
-            <button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
-              <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i>
-              <span class="hidden sm:inline">Export</span>
-              <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
-            </button>
-            <div class="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-xl border border-slate-200 py-1 hidden group-hover:block z-40">
-              <button onclick="exportToCSV()" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export to CSV
-              </button>
-              <button onclick="exportToJSON()" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
-                <i data-lucide="file-code" class="w-4 h-4 text-blue-600"></i> Export to JSON
-              </button>
+          <!-- Official IIUC Logo & Title -->
+          <div class="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+            <div class="w-10 h-10 sm:w-14 sm:h-14 p-1 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-md flex items-center justify-center shrink-0 backdrop-blur-sm">
+              <img src="iiuc-logo.png" alt="IIUC Emblem" class="w-full h-full object-contain filter drop-shadow">
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[9px] sm:text-xs font-bold tracking-wider sm:tracking-widest uppercase px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+                  IIUC Engineers
+                </span>
+                <span class="text-[9px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                  Term 2027 & 2028
+                </span>
+              </div>
+              <h1 class="text-sm sm:text-xl lg:text-2xl font-bold font-display tracking-tight text-white leading-snug sm:leading-tight truncate sm:overflow-visible mt-0.5">
+                IIUC Candidate Directory &amp; Voter Guide
+              </h1>
             </div>
           </div>
 
-          <!-- ADMIN PORTAL LOGIN BUTTON -->
-          <button onclick="openAdminLoginModal()" id="adminLoginBtn" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 transition shadow-sm">
-            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-            <span>Admin</span>
-          </button>
+          <!-- Header Actions -->
+          <div class="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+            
+            <!-- Print Guide Button -->
+            <button onclick="window.print()" class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm">
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              <span>Print</span>
+            </button>
 
-          <!-- SUBMIT CANDIDATE BUTTON -->
-          <button onclick="openCandidateFormModal()" class="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-900/30 transition transform active:scale-95">
-            <i data-lucide="user-plus" class="w-4 h-4"></i>
-            <span id="headerSubmitBtnLabel">+ Submit Candidate</span>
-          </button>
+            <!-- Export Dropdown -->
+            <div class="relative group">
+              <button class="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm" title="Export Directory">
+                <i data-lucide="download" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400"></i>
+                <span class="hidden md:inline">Export</span>
+                <i data-lucide="chevron-down" class="hidden sm:inline w-3 h-3 text-slate-400"></i>
+              </button>
+              <div class="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-xl border border-slate-200 py-1 hidden group-hover:block z-40">
+                <button onclick="exportToCSV()" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
+                  <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export to CSV
+                </button>
+                <button onclick="exportToJSON()" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2">
+                  <i data-lucide="file-code" class="w-4 h-4 text-blue-600"></i> Export to JSON
+                </button>
+              </div>
+            </div>
+
+            <!-- ADMIN PORTAL LOGIN / ACTIVE BUTTON -->
+            <button onclick="openAdminLoginModal()" id="adminLoginBtn" class="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 transition shadow-sm" title="Admin Portal">
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+              <span class="hidden sm:inline" id="adminLoginBtnText">Admin</span>
+            </button>
+
+            <!-- SUBMIT CANDIDATE BUTTON -->
+            <button onclick="openCandidateFormModal()" class="inline-flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-900/30 transition transform active:scale-95 whitespace-nowrap">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+              <span id="headerSubmitBtnLabel"><span class="sm:hidden">+ Submit</span><span class="hidden sm:inline">+ Submit Candidate</span></span>
+            </button>
+
+          </div>
 
         </div>
-
       </div>
-    </div>
-  </header>
+    </header>
+  </div>
 
   <!-- PRINT ONLY HEADER -->
   <div class="hidden print:block p-6 border-b-2 border-slate-800 text-center mb-6">
@@ -1307,7 +1314,7 @@
         topBar.classList.remove('hidden');
         tabsWrapper.classList.remove('hidden');
         publicBanner.classList.add('hidden');
-        submitBtnLabel.textContent = "+ Add Candidate (Admin)";
+        submitBtnLabel.innerHTML = '<span class="sm:hidden">+ Candidate</span><span class="hidden sm:inline">+ Add Candidate (Admin)</span>';
         if (formSubtitle) formSubtitle.textContent = "Authorized Direct Admin Publishing";
         if (formAlert) formAlert.classList.add('hidden');
         if (submitterRow) submitterRow.classList.add('hidden');
@@ -1318,20 +1325,20 @@
         if (emailDisplay) emailDisplay.textContent = currentAdminUser.email;
         if (roleDisplay) roleDisplay.textContent = currentAdminUser.role.toUpperCase();
 
-        adminLoginBtn.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i><span>Admin Active</span>`;
+        adminLoginBtn.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i><span class="hidden sm:inline">Admin Active</span>`;
         adminLoginBtn.onclick = () => setAdminTab('pending');
       } else {
         topBar.classList.add('hidden');
         tabsWrapper.classList.add('hidden');
         publicBanner.classList.remove('hidden');
-        submitBtnLabel.textContent = "+ Submit Candidate";
+        submitBtnLabel.innerHTML = '<span class="sm:hidden">+ Submit</span><span class="hidden sm:inline">+ Submit Candidate</span>';
         if (formSubtitle) formSubtitle.textContent = "Requires review & approval by administrator";
         if (formAlert) formAlert.classList.remove('hidden');
         if (submitterRow) submitterRow.classList.remove('hidden');
         if (document.getElementById('formSubmitterName')) document.getElementById('formSubmitterName').required = true;
         if (document.getElementById('formSubmitterEmail')) document.getElementById('formSubmitterEmail').required = true;
         if (submitBtnText) submitBtnText.textContent = "Submit for Admin Approval";
-        adminLoginBtn.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i><span>Admin</span>`;
+        adminLoginBtn.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Admin</span>`;
         adminLoginBtn.onclick = openAdminLoginModal;
         currentAdminTab = 'live';
       }
