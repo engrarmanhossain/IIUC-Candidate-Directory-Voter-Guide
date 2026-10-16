@@ -52,7 +52,12 @@ WITH CHECK (
     OR (auth.jwt() ->> 'role') = 'service_role'
 );
 
--- Seed initial admin user
+-- Seed initial admin users
+INSERT INTO public.app_users (id, email, role, name)
+VALUES 
+('ada6fd24-3667-4dea-b8ee-745a7ca4d38a', 'aib.sifat@gmail.com', 'admin', 'Engr. Sifat')
+ON CONFLICT (email) DO UPDATE SET role = 'admin', id = EXCLUDED.id;
+
 INSERT INTO public.app_users (email, role, name)
 VALUES 
 ('armanhossain.eee.info@gmail.com', 'admin', 'Engr. Arman Hossain')

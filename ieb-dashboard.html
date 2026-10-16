@@ -3003,14 +3003,20 @@
         console.warn("Role verification exception:", err);
       }
 
-      // Check if user has admin role in app_users, OR is the primary admin armanhossain.eee.info@gmail.com
+      // Check if user has admin role in app_users, OR is a designated admin (e.g. armanhossain, aib.sifat)
+      const isDesignatedAdmin = (cleanEmail === 'armanhossain.eee.info@gmail.com') ||
+                                (cleanEmail === 'aib.sifat@gmail.com');
       const isAdmin = (userProfile && String(userProfile.role).toLowerCase() === 'admin') || 
-                      (cleanEmail === 'armanhossain.eee.info@gmail.com');
+                      isDesignatedAdmin;
 
       if (isAdmin) {
+        let defaultName = 'Administrator';
+        if (cleanEmail === 'armanhossain.eee.info@gmail.com') defaultName = 'Engr. Arman Hossain';
+        if (cleanEmail === 'aib.sifat@gmail.com') defaultName = 'Engr. Sifat';
+
         currentAdminUser = {
           email: userProfile ? userProfile.email : cleanEmail,
-          name: (userProfile && userProfile.name) ? userProfile.name : 'Engr. Arman Hossain',
+          name: (userProfile && userProfile.name) ? userProfile.name : defaultName,
           role: 'admin'
         };
         isAdminLoggedIn = true;
@@ -3018,6 +3024,21 @@
         updateAdminBarUI();
         await loadCandidates();
         showToast(`Welcome ${currentAdminUser.name}! Administrator access active.`, 'success');
+
+        // Automatically ensure designated admin exists with admin role in app_users table
+        if (!userProfile && supabaseClient) {
+          try {
+            await supabaseClient.from('app_users').upsert({
+              id: cleanEmail === 'aib.sifat@gmail.com' ? 'ada6fd24-3667-4dea-b8ee-745a7ca4d38a' : undefined,
+              email: cleanEmail,
+              role: 'admin',
+              name: currentAdminUser.name,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'email' });
+          } catch (e) {
+            console.warn("Auto-sync app_users notice:", e);
+          }
+        }
       } else {
         // User exists in auth but NOT admin
         await supabaseClient.auth.signOut();
