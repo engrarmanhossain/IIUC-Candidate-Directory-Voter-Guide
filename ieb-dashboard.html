@@ -923,12 +923,12 @@
 
           <div id="submitterInfoRow" class="mt-4 p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Name / Relation to Candidate</label>
-              <input type="text" id="formSubmitterName" placeholder="e.g. Self / Batchmate / Campaign Team" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
+              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Name / Relation to Candidate <span class="text-rose-500">*</span></label>
+              <input type="text" id="formSubmitterName" required placeholder="e.g. Self / Batchmate / Campaign Team" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Email (for notification)</label>
-              <input type="email" id="formSubmitterEmail" placeholder="your.email@example.com" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
+              <label class="block text-[11px] font-bold text-emerald-900 mb-1">Your Email (for notification) <span class="text-rose-500">*</span></label>
+              <input type="email" id="formSubmitterEmail" required placeholder="your.email@example.com" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded text-xs text-slate-800">
             </div>
           </div>
 
@@ -1311,6 +1311,8 @@
         if (formSubtitle) formSubtitle.textContent = "Authorized Direct Admin Publishing";
         if (formAlert) formAlert.classList.add('hidden');
         if (submitterRow) submitterRow.classList.add('hidden');
+        if (document.getElementById('formSubmitterName')) document.getElementById('formSubmitterName').required = false;
+        if (document.getElementById('formSubmitterEmail')) document.getElementById('formSubmitterEmail').required = false;
         if (submitBtnText) submitBtnText.textContent = "Publish Candidate Directly";
 
         if (emailDisplay) emailDisplay.textContent = currentAdminUser.email;
@@ -1326,6 +1328,8 @@
         if (formSubtitle) formSubtitle.textContent = "Requires review & approval by administrator";
         if (formAlert) formAlert.classList.remove('hidden');
         if (submitterRow) submitterRow.classList.remove('hidden');
+        if (document.getElementById('formSubmitterName')) document.getElementById('formSubmitterName').required = true;
+        if (document.getElementById('formSubmitterEmail')) document.getElementById('formSubmitterEmail').required = true;
         if (submitBtnText) submitBtnText.textContent = "Submit for Admin Approval";
         adminLoginBtn.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i><span>Admin</span>`;
         adminLoginBtn.onclick = openAdminLoginModal;
@@ -1892,10 +1896,16 @@
         if (modalSub) modalSub.textContent = "Direct Admin Publishing — instant live entry";
         submitBtn.textContent = "Publish Candidate Directly";
         if (alertBox) alertBox.classList.add('hidden');
+        if (document.getElementById('submitterInfoRow')) document.getElementById('submitterInfoRow').classList.add('hidden');
+        if (document.getElementById('formSubmitterName')) document.getElementById('formSubmitterName').required = false;
+        if (document.getElementById('formSubmitterEmail')) document.getElementById('formSubmitterEmail').required = false;
       } else {
         modalTitle.textContent = "Submit Candidate Entry";
         if (modalSub) modalSub.textContent = "Requires review & approval by administrator";
         submitBtn.textContent = "Submit for Admin Approval";
+        if (document.getElementById('submitterInfoRow')) document.getElementById('submitterInfoRow').classList.remove('hidden');
+        if (document.getElementById('formSubmitterName')) document.getElementById('formSubmitterName').required = true;
+        if (document.getElementById('formSubmitterEmail')) document.getElementById('formSubmitterEmail').required = true;
         if (alertBox) {
           alertBox.innerHTML = `
             <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
@@ -1962,6 +1972,9 @@
       if (modalSub) modalSub.textContent = "Admin direct edit mode — saving will publish immediately";
       submitBtn.textContent = "Update & Save Changes";
       if (alertBox) alertBox.classList.add('hidden');
+      if (document.getElementById('submitterInfoRow')) document.getElementById('submitterInfoRow').classList.add('hidden');
+      if (document.getElementById('formSubmitterName')) document.getElementById('formSubmitterName').required = false;
+      if (document.getElementById('formSubmitterEmail')) document.getElementById('formSubmitterEmail').required = false;
 
       document.getElementById('candidateFormModal').classList.remove('hidden');
       lucide.createIcons();
@@ -2051,12 +2064,23 @@
         image_url: finalImageUrl
       };
 
+      if (!isAdminLoggedIn) {
+        const subName = document.getElementById('formSubmitterName') ? document.getElementById('formSubmitterName').value.trim() : '';
+        const subEmail = document.getElementById('formSubmitterEmail') ? document.getElementById('formSubmitterEmail').value.trim() : '';
+        if (!subName || !subEmail) {
+          showToast('Please provide your Name/Relation and Email.', 'error');
+          submitBtn.disabled = false;
+          document.getElementById('formSubmitBtnText').textContent = originalText;
+          return;
+        }
+      }
+
       // -----------------------------------------------------------------------
       // CASE 1: PUBLIC SUGGEST EDIT ON EXISTING CANDIDATE (ADMIN APPROVAL REQUIRED)
       // -----------------------------------------------------------------------
       if (isPublicEdit && id && !isAdminLoggedIn) {
-        const requesterName = document.getElementById('formSubmitterName').value.trim() || 'Public Submitter';
-        const requesterEmail = document.getElementById('formSubmitterEmail').value.trim() || '';
+        const requesterName = document.getElementById('formSubmitterName').value.trim();
+        const requesterEmail = document.getElementById('formSubmitterEmail').value.trim();
         const editReason = document.getElementById('formEditReason') ? document.getElementById('formEditReason').value.trim() : 'Public candidate update';
 
         const editPayload = {
@@ -2124,8 +2148,8 @@
       const dbPayload = {
         ...candidateData,
         status: isAdminLoggedIn ? 'approved' : 'pending',
-        submitter_name: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.name : 'Admin') : (document.getElementById('formSubmitterName').value.trim() || 'Public Submitter'),
-        submitter_email: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.email : '') : (document.getElementById('formSubmitterEmail').value.trim() || ''),
+        submitter_name: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.name : 'Admin') : document.getElementById('formSubmitterName').value.trim(),
+        submitter_email: isAdminLoggedIn ? (currentAdminUser ? currentAdminUser.email : '') : document.getElementById('formSubmitterEmail').value.trim(),
         updated_at: new Date().toISOString()
       };
 
@@ -2451,6 +2475,10 @@
       if (cand.editRequest && cand.editRequest.requesterEmail && document.getElementById('formSubmitterEmail')) {
         document.getElementById('formSubmitterEmail').value = cand.editRequest.requesterEmail;
       }
+
+      if (document.getElementById('submitterInfoRow')) document.getElementById('submitterInfoRow').classList.remove('hidden');
+      if (document.getElementById('formSubmitterName')) document.getElementById('formSubmitterName').required = true;
+      if (document.getElementById('formSubmitterEmail')) document.getElementById('formSubmitterEmail').required = true;
 
       submitBtn.textContent = "Submit Edit for Approval";
       const noticeFooter = document.getElementById('formNoticeFooter');
